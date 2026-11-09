@@ -359,3 +359,33 @@ h2 {
 .steps li:first-child p {
   max-width: none;
 }
+.demo-section h2 {
+  font-size: clamp(26px, 3.4vw, 38px);
+}
+.demo-description {
+  margin: 12px 0 24px;
+  text-align: center;
+  color: #67686b;
+  font-size: 17px;
+  line-height: 1.5;
+}
+.demo-section video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 73 / 45;
+  background: #181818;
+  border: 1px solid #d1d0d0;
+  border-radius: 17px;
+  box-shadow: 0 12px 36px #0000000d;
+}
+.demo-section video:focus-visible {
+  outline: 3px solid #5b88b2;
+  outline-offset: 5px;
+}
+.demo-fallback {
+  text-align: center;
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #67686b;
+}

@@ -42,8 +42,27 @@
     </div>
   </section>
 
-  <section class="product container" aria-label="How the floating window works">
-    <app-product-demo />
+  <section class="product container demo-section" aria-labelledby="demo-title">
+    <h2 id="demo-title">See it in action.</h2>
+    <p class="demo-description" id="demo-description">
+      Select text, press Alt + Shift + E, then add your question. A 38-second demo, with no
+      narration.
+    </p>
+    <video
+      controls
+      playsinline
+      preload="none"
+      poster="/assets/demo/poster.jpg"
+      width="1752"
+      height="1080"
+      aria-label="ChatGPT Island application demo"
+      aria-describedby="demo-description"
+    >
+      <source src="/assets/demo/chatgpt-island.mp4" type="video/mp4" />
+      Your browser does not support embedded video.
+      <a href="/assets/demo/chatgpt-island.mp4">Download the demo video</a>.
+    </video>
+    <p class="demo-fallback"><a href="/assets/demo/chatgpt-island.mp4">Open video</a></p>
   </section>
 
   <section class="how-it-works container" id="how-it-works" aria-labelledby="how-title">
@@ -100,11 +119,13 @@
     </button>
   </div>
   <p>
-    This landing page uses no analytics, tracking cookies, or third-party fonts. Download and checksum links go directly to GitHub, which receives those requests and serves the files.
+    This landing page uses no analytics, tracking cookies, or third-party fonts. Download and
+    checksum links go directly to GitHub, which receives those requests and serves the files.
   </p>
   <p>
     The installed app captures text only when you invoke its shortcut. It prepares an editable draft
-    and never presses Send. The preview on this page is an illustration, not a live ChatGPT session.
+    and never presses Send. The demo on this page is a prerecorded video, not a live ChatGPT
+    session.
   </p>
   <p>
     Preparing a draft exposes your text to the real ChatGPT page and its scripts before submission.

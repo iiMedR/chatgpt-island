@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, ElementRef, viewChild } from '@angular/core';
 import { DownloadButton } from './components/download-button';
 import { Icon } from './components/icon';
-import { ProductDemo } from './components/product-demo';
+
 import { CHECKSUM_URL, REPOSITORY } from './release-download';
 
 @Component({
   selector: 'app-root',
-  imports: [DownloadButton, Icon, ProductDemo],
+  imports: [DownloadButton, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './app.html',
   styleUrl: './app.css',
