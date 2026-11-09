@@ -68,6 +68,16 @@ pub fn show_launcher(app: &AppHandle) -> Result<(), String> {
         650.0,
     )
 }
+pub fn show_handoff(app: &AppHandle, id: &str) -> Result<(), String> {
+    show(
+        app,
+        "handoff",
+        "Selected text — manual handoff",
+        &format!("view=handoff&session={id}"),
+        500.0,
+        480.0,
+    )
+}
 
 #[cfg(test)]
 mod tests {

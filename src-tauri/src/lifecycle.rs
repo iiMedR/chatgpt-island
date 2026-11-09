@@ -197,10 +197,16 @@ pub struct Core {
     pub error: Option<String>,
     pub pending_selection: PendingSelection,
     pub capture_status: String,
+    pub handoff: Option<crate::handoff::Handoff>,
 }
 impl Core {
     fn destroyed(&mut self, id: &str) -> Effect {
         self.pending_selection.clear_session(id);
+        if self.handoff.as_ref().is_some_and(|h| h.session == id)
+            && let Some(mut h) = self.handoff.take()
+        {
+            h.cancel();
+        }
         if self.model.matches(id) {
             self.capture_status = "No pending selection; session closed.".into();
         }
@@ -219,6 +225,8 @@ pub enum Request {
     Close,
     Quit,
     Settings,
+    HandoffFailed(String),
+    MoveResize(bool),
     Destroyed(String),
     Decision {
         session_id: String,
@@ -255,6 +263,7 @@ impl Controller {
             error,
             pending_selection: PendingSelection::default(),
             capture_status: "No selection context.".into(),
+            handoff: None,
         }));
         let exiting = Arc::new(AtomicBool::new(false));
         let (sender, receiver) = mpsc::channel();
@@ -328,6 +337,9 @@ fn focus(app: &AppHandle, label: &str) -> Result<(), String> {
 fn finish_exit(app: &AppHandle, shared: &Arc<Mutex<Core>>, exiting: &Arc<AtomicBool>) -> bool {
     if let Ok(mut c) = shared.lock() {
         c.pending_selection.clear();
+        if let Some(mut h) = c.handoff.take() {
+            h.cancel();
+        }
     }
     eprintln!("Application Quit: releasing global shortcut.");
     let mut registration = shared
@@ -385,6 +397,14 @@ fn apply(
                 .ok_or("Missing session.")?
                 .id
                 .clone();
+            if let Ok(mut c) = shared.lock()
+                && let Some(h) = c.handoff.as_mut()
+            {
+                h.cancel();
+            }
+            if let Some(notice) = app.get_webview_window("handoff") {
+                let _ = notice.destroy();
+            }
             let result = if let Some(window) = app.get_webview_window(&id) {
                 window.destroy().map_err(|e| e.to_string())
             } else {
@@ -429,6 +449,27 @@ fn handle_request(
     };
     match request {
         Request::Settings => confirmation::show_settings(app)?,
+        Request::HandoffFailed(id) => {
+            let show = shared
+                .lock()
+                .map_err(|_| "State unavailable.")?
+                .handoff
+                .as_ref()
+                .is_some_and(|h| h.session == id && h.status == crate::handoff::Status::Failed);
+            let current = shared.lock().map_err(|_| "State unavailable.")?;
+            let show = show && current.model.matches(&id) && current.model.phase == Phase::Open;
+            drop(current);
+            if show {
+                confirmation::show_handoff(app, &id)?;
+            }
+        }
+        Request::MoveResize(resize) => {
+            if let Some(id) = app.state::<Controller>().session_id()
+                && let Some(window) = app.get_webview_window(&id)
+            {
+                crate::window_layout::keyboard_move_resize(&window, resize);
+            }
+        }
         Request::Quit => {
             eprintln!("Application Quit requested from a native control.");
             return close(app, shared, exiting, true);
@@ -494,6 +535,9 @@ fn handle_request(
                     {
                         let mut c = shared.lock().map_err(|_| "Lifecycle state unavailable.")?;
                         c.pending_selection.clear();
+                        if let Some(mut h) = c.handoff.take() {
+                            h.cancel();
+                        }
                         c.capture_status = "No selection context (opened without capture).".into();
                         if let Some(report) = report {
                             clipboard_warning = report.clipboard_warning;
@@ -509,6 +553,7 @@ fn handle_request(
                             } else {
                                 format!("No selected text ({} ms).", report.elapsed_ms)
                             };
+
                             if clipboard_warning {
                                 c.error = Some("Copy fallback may have left copied text on the clipboard. Existing nonempty clipboard data was never replaced.".into());
                             }
@@ -518,7 +563,7 @@ fn handle_request(
                         }
                     }
                     // All capture and state storage finish before WebView creation/focus.
-                    match popup::create(app, &profile) {
+                    match popup::create(app, &profile, capture_context.flatten()) {
                         Ok(()) => shared
                             .lock()
                             .map_err(|_| "Lifecycle state unavailable.")?
@@ -558,6 +603,7 @@ fn handle_request(
                             return Err(error);
                         }
                     }
+                    crate::handoff::start(app, &id);
                     if clipboard_warning {
                         confirmation::show_settings(app)?;
                     }
@@ -565,6 +611,15 @@ fn handle_request(
             }
         }
         Request::Destroyed(id) => {
+            if shared
+                .lock()
+                .map_err(|_| "State unavailable.")?
+                .model
+                .matches(&id)
+                && let Some(window) = app.get_webview_window("handoff")
+            {
+                let _ = window.destroy();
+            }
             let effect = shared
                 .lock()
                 .map_err(|_| "Lifecycle state unavailable.")?
@@ -616,6 +671,7 @@ fn handle_request(
                 };
                 if !confirm {
                     focus(app, &session_id)?;
+                    crate::handoff::show_failed_notice(app, &session_id);
                 }
                 Ok(effect)
             })();
@@ -793,6 +849,7 @@ mod selection_lifecycle_tests {
             error: None,
             pending_selection: Default::default(),
             capture_status: String::new(),
+            handoff: None,
         };
         core.model.begin(Profile {
             id: "active".into(),

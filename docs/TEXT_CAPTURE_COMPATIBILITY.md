@@ -35,4 +35,4 @@ Native opt-in UI interaction, real fallback success, complex-format preservation
 
 No captured text is injected into the website, submitted, logged or persisted by Island. The local fixture file contains authored test data only. Source applications/clipboard managers can retain their own data; ordinary memory release is not forensic erasure. The explicit debug preview is for samples only and is rejected in production. See ARCHITECTURE.md for the capture/IPC/privacy boundary and DEVELOPMENT.md for optional future test steps.
 
-Milestone 04 remains unstarted: its scope is the Rust pending-selection handoff, ChatGPT composer integration and popup polish, with explicit submission behavior to be designed separately.
+This file records M3 evidence. Subsequent draft-only handoff and popup implementation is documented in CHATGPT_HANDOFF.md; M3 capture results above remain historical and were not rerun.

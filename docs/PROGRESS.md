@@ -27,10 +27,23 @@
    - [x] Docker checks and 26 Rust tests passed; strict Clippy passed.
    - [ ] Native fallback/clipboard-manager, Word/PDF and remaining edge-case coverage. Testing stopped at user request.
    - [x] Compatibility limits and observed VS Code failure documented in TEXT_CAPTURE_COMPATIBILITY.md.
-4. **ChatGPT Handoff & Popup Polish — NOT STARTED**
+4. **ChatGPT Handoff & Popup Polish — PARTIAL (implementation and draft workflow verified)**
+   - [x] Typed session-bound handoff; bounded readiness; safe JSON data; at-most-once insertion.
+   - [x] Exact native/script origin and document checks; preserve occupied composers; no submission.
+   - [x] Trusted manual selection/copy notice on failure; no automatic handoff clipboard write.
+   - [x] 520×660 borderless popup, native shadow/corners, working-area/DPI placement and clamping.
+   - [x] Native keyboard move/size mechanisms; no website drag privileges or overlay.
+   - [x] 30 Rust tests and 4 Docker JS/security tests passed; frontend typecheck/build passed.
+   - [x] Strict Clippy completed after six style fixes; formatting applied.
+   - [x] Focused native Notepad → multilingual editable draft passed after observed mobile-selector fix; Send enabled; no submission.
+   - [x] Actual failed-handoff notice and native borderless/rounded rendering observed.
+   - [ ] Manual guest response/follow-up, desktop contenteditable, Windows 10/mixed-DPI/multiple monitors/hot-plug and native move/resize acceptance remain unverified.
+   - [x] No repeated compatibility sweep; respected user's reduced-testing request. Details in CHATGPT_HANDOFF.md.
 5. **Testing, Reliability & Windows Installer — NOT STARTED**
 
 Detailed observations, interrupted tests and remaining verification are in MILESTONE02.md. Safe automatic profile deletion remains unimplemented. The primary isolation behavior uses fresh, verified-private WebViews; remote erasure is not claimed.
 
 
 Final M3 verification: formatting applied and `cargo check --locked` passed after the final clipboard error/transport guards. Windows reported incremental-cache hard-link fallback to copying; compilation succeeded. No further test-suite or native UI runs were made after the user requested testing stop. The 26-test and Docker results above refer to the completed earlier runs. No captured user data or runtime artifacts are included in the commit.
+
+Final M4 integration compiled successfully after serializing fallback notices with popup destruction. No repeated suite or compatibility sweep was performed. Full implementation/evidence/limits are in CHATGPT_HANDOFF.md. Milestone 05 remains unstarted.

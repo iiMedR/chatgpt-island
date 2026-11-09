@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "handoff",
+  "description": "Trusted manual handoff notice for the active session only.",
+  "local": true,
+  "windows": ["handoff"],
+  "permissions": ["allow-handoff-snapshot", "allow-handoff-focus"]
+}

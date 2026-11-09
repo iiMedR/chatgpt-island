@@ -6,14 +6,22 @@ use tauri::{
     AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, webview::NewWindowResponse,
 };
 
-pub fn create(app: &AppHandle, profile: &Profile) -> Result<(), String> {
+pub fn create(
+    app: &AppHandle,
+    profile: &Profile,
+    origin: Option<crate::text_capture::types::Foreground>,
+) -> Result<(), String> {
     let url = session::CHATGPT_URL
         .parse()
         .map_err(|e| format!("Invalid website URL: {e}"))?;
     let popup = WebviewWindowBuilder::new(app, &profile.id, WebviewUrl::External(url))
         .title("ChatGPT Island")
-        .inner_size(900.0, 650.0)
-        .center()
+        .inner_size(520.0, 660.0)
+        .decorations(false)
+        .shadow(true)
+        .minimizable(false)
+        .maximizable(false)
+        .visible(false)
         .resizable(true)
         .incognito(true)
         .data_directory(profile.path.clone())
@@ -26,7 +34,10 @@ pub fn create(app: &AppHandle, profile: &Profile) -> Result<(), String> {
             format!("WebView creation failed. Check WebView2 Runtime and profile permissions: {e}")
         })?;
     verify_private_mode(&popup)?;
+    crate::window_layout::configure(&popup, origin)?;
     install_escape(&popup, app.clone())?;
+    popup.show().map_err(|e| e.to_string())?;
+    popup.set_focus().map_err(|e| e.to_string())?;
     eprintln!("Private popup created; WebView2 private-mode flag verified.");
     Ok(())
 }
@@ -73,7 +84,8 @@ fn install_escape(popup: &WebviewWindow, app: AppHandle) -> Result<(), String> {
     use webview2_com::{
         AcceleratorKeyPressedEventHandler,
         Microsoft::Web::WebView2::Win32::{
-            COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN, COREWEBVIEW2_PHYSICAL_KEY_STATUS,
+            COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN, COREWEBVIEW2_KEY_EVENT_KIND_SYSTEM_KEY_DOWN,
+            COREWEBVIEW2_PHYSICAL_KEY_STATUS,
         },
     };
     let (sender, receiver) = std::sync::mpsc::channel();
@@ -87,6 +99,14 @@ fn install_escape(popup: &WebviewWindow, app: AppHandle) -> Result<(), String> {
                         let mut kind = Default::default();
                         args.VirtualKey(&mut key)?;
                         args.KeyEventKind(&mut kind)?;
+                        if (key == 0x76 || key == 0x77)
+                            && kind == COREWEBVIEW2_KEY_EVENT_KIND_SYSTEM_KEY_DOWN
+                        {
+                            args.SetHandled(true)?;
+                            let _ = app
+                                .state::<Controller>()
+                                .send(Request::MoveResize(key == 0x77));
+                        }
                         if key == 0x1b && kind == COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN {
                             let mut status = COREWEBVIEW2_PHYSICAL_KEY_STATUS::default();
                             args.PhysicalKeyStatus(&mut status)?;

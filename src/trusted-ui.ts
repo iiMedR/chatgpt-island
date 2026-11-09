@@ -10,6 +10,23 @@ interface Snapshot {
   error: string | null;
 }
 const root = () => document.querySelector<HTMLElement>("#app")!;
+export async function showHandoff() {
+  document.title = "Selected text — manual handoff";
+  root().innerHTML = `<h1>Paste your selected text</h1><p>Automatic preparation could not be confirmed. Check the ChatGPT composer first: a draft may already be present.</p>
+    <p>Select the draft below, press Ctrl+C, return to ChatGPT and paste once with Ctrl+V. Copying replaces your clipboard contents. Nothing is submitted for you.</p>
+    <textarea id="draft" readonly aria-label="Prepared draft"></textarea>
+    <button id="select">Select draft</button><button id="focus">Return to ChatGPT</button><p id="error" role="alert"></p>`;
+  const sessionId = new URLSearchParams(window.location.search).get("session");
+  const text = document.querySelector<HTMLTextAreaElement>("#draft")!;
+  const error = document.querySelector<HTMLElement>("#error")!;
+  try { const state = await invoke<{draft: string}>("handoff_snapshot", {sessionId}); text.value = state.draft; }
+  catch { error.textContent = "This selection is no longer available."; }
+  document.querySelector<HTMLButtonElement>("#select")!.onclick = () => { text.focus(); text.select(); };
+  document.querySelector<HTMLButtonElement>("#focus")!.onclick = async () => {
+    try { await invoke("handoff_focus", {sessionId}); } catch { error.textContent = "This popup has closed."; text.value = ""; }
+  };
+  window.addEventListener("pagehide", () => { text.value = ""; });
+}
 export async function showConfirmation() {
   document.title = "Close this conversation?";
   root().innerHTML = `<section class="dialog"><h1>Close this conversation?</h1>

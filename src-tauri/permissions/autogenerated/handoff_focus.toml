@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-handoff-focus"
+description = "Enables the handoff_focus command without any pre-configured scope."
+commands.allow = ["handoff_focus"]
+
+[[permission]]
+identifier = "deny-handoff-focus"
+description = "Denies the handoff_focus command without any pre-configured scope."
+commands.deny = ["handoff_focus"]

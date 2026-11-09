@@ -3,7 +3,7 @@ export function showLauncher() {
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <h1>ChatGPT Island</h1>
-  <p>Milestone 03 · development-only launcher</p>
+  <p>Milestone 04 · development-only launcher</p>
   <p>This opens the real ChatGPT website in a private WebView2 window.</p>
   <button id="open">Open private popup</button>
   <button id="close">Request close</button>

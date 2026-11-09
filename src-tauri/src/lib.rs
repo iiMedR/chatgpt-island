@@ -1,4 +1,5 @@
 mod confirmation;
+mod handoff;
 mod lifecycle;
 mod popup;
 mod session;
@@ -6,6 +7,7 @@ mod settings;
 mod shortcuts;
 mod text_capture;
 mod tray;
+mod window_layout;
 use lifecycle::{Controller, Request};
 use std::sync::atomic::Ordering;
 use tauri::Manager;
@@ -23,7 +25,9 @@ pub fn run() {
             lifecycle::resolve_confirmation,
             lifecycle::reset_warning,
             lifecycle::set_clipboard_fallback,
-            lifecycle::selection_preview
+            lifecycle::selection_preview,
+            handoff::handoff_snapshot,
+            handoff::handoff_focus
         ])
         .setup(|app| {
             Controller::install(app.handle())?;
@@ -43,7 +47,7 @@ pub fn run() {
                     if !controller.exiting.load(Ordering::SeqCst) =>
                 {
                     match window.label() {
-                        "settings" => {}
+                        "settings" | "handoff" => {}
                         "main" => {
                             api.prevent_close();
                             let _ = controller.send(Request::Quit);
@@ -68,6 +72,15 @@ pub fn run() {
                 }
                 tauri::WindowEvent::Destroyed if window.label().starts_with("island-") => {
                     let _ = controller.send(Request::Destroyed(window.label().to_string()));
+                }
+                tauri::WindowEvent::Moved(_)
+                | tauri::WindowEvent::Resized(_)
+                | tauri::WindowEvent::ScaleFactorChanged { .. }
+                    if window.label().starts_with("island-") =>
+                {
+                    if let Some(popup) = app.get_webview_window(window.label()) {
+                        window_layout::ensure_visible(&popup);
+                    }
                 }
                 _ => {}
             }

@@ -9,6 +9,8 @@ fn main() {
             "reset_warning",
             "set_clipboard_fallback",
             "selection_preview",
+            "handoff_snapshot",
+            "handoff_focus",
         ]),
     ))
     .expect("Tauri build configuration failed")

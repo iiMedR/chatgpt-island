@@ -2,7 +2,7 @@
 
 Windows Tauri 2 / Rust background utility using the actual ChatGPT website in a private WebView2 popup. No API key, custom chat interface, backend, OAuth or application account is required. Guest availability depends on ChatGPT and the current network/location.
 
-Milestone 01 guest feasibility is verified. Milestone 02 remains partial pending tray Quit verification; see [native results](docs/MILESTONE02.md). Milestone 03 selected-text capture is implemented, with native compatibility and remaining verification recorded in [TEXT_CAPTURE_COMPATIBILITY.md](docs/TEXT_CAPTURE_COMPATIBILITY.md). Milestones 04–05 have not started.
+Milestone 01 guest feasibility is verified. Milestone 02 remains partial pending tray Quit verification; see [native results](docs/MILESTONE02.md). Milestone 03 selected-text capture is implemented, with native compatibility and remaining verification recorded in [TEXT_CAPTURE_COMPATIBILITY.md](docs/TEXT_CAPTURE_COMPATIBILITY.md). Milestone 04 handoff and borderless popup design are implemented; see [CHATGPT_HANDOFF.md](docs/CHATGPT_HANDOFF.md) for actual verification and remaining limits. Milestone 05 has not started.
 
 ## Use
 
@@ -15,7 +15,7 @@ Start with `npm run tauri dev` during development. Normal startup creates a tray
 - Tray **Quit** requests application exit, confirming conversation loss when a popup is open and warnings are enabled.
 - A normal left-click on the tray icon opens/focuses the popup; right-click opens its menu. Windows may place the icon under hidden icons.
 
-The trusted close dialog offers Cancel, Close conversation and Don't show this again. Cancel preserves the popup and never saves the checkbox. Confirm destroys the WebView. Selecting the checkbox and confirming persists the skip-warning preference. Without it, every close request shows the warning again. The native X button follows the same rules. Closing a popup leaves the tray app running.
+The trusted close dialog offers Cancel, Close conversation and Don't show this again. Cancel preserves the popup and never saves the checkbox. Confirm destroys the WebView. Selecting the checkbox and confirming persists the skip-warning preference. Without it, every close request shows the warning again. Alt+F4 follows the same rules; the final popup has no native title-bar buttons. Closing a popup leaves the tray app running.
 
 Escape takes precedence over ChatGPT's own menus/dialogs while its WebView has focus. Cancel the local confirmation to keep the conversation. Escape elsewhere has no island effect. Forceful process termination, crashes and OS shutdown cannot be guaranteed to display confirmation.
 
@@ -44,7 +44,7 @@ Docker installs locked JavaScript dependencies, runs TypeScript/security tests a
 The optional development launcher is available only in debug builds:
 
 ```powershell
-npm run tauri dev -- -- --dev-launcher
+npm run tauri dev -- -- -- --dev-launcher
 ```
 
 Its close control requests confirmation, and its native X requests application Quit. It is not required during normal operation.
@@ -55,7 +55,7 @@ Every opening uses incognito mode and a fresh UUID directory under `%LOCALAPPDAT
 
 Profile directories remain retained because no general browser-process-exit cleanup protocol is implemented. They may contain runtime metadata or other residual files. Exit the app and verify all processes associated with its exact private-sessions paths have ended before any offline removal. Never remove active or unrelated browser profiles. Closing does not erase remote ChatGPT data or promise forensic local erasure.
 
-Only the boolean `skip_close_confirmation` is persisted in `%APPDATA%\com.chatgptisland.dev\settings.json`. Corrupt settings default to warnings enabled. No conversation text, selected text, cookies or tokens are stored in settings.
+Only the booleans `skip_close_confirmation` and `clipboard_fallback_enabled` are persisted in `%APPDATA%\com.chatgptisland.dev\settings.json`. Corrupt settings default to warnings enabled. No conversation text, selected text, cookies or tokens are stored in settings.
 
 Remote content has no Tauri capabilities. Only narrowly scoped local launcher, confirmation and settings windows can invoke their respective controls. There are no filesystem/shell/shortcut permissions for websites or frontend code. Popup navigation is restricted to exact HTTPS chatgpt.com on port 443; new windows and downloads are denied. No authentication or challenge bypass is provided.
 
@@ -69,3 +69,13 @@ Remote content has no Tauri capabilities. Only narrowly scoped local launcher, c
 - A Chromium window-class shutdown diagnostic was observed in Milestone 01 despite successful process exit; see feasibility notes.
 
 See [architecture](docs/ARCHITECTURE.md), [requirements](docs/REQUIREMENTS.md), [progress](docs/PROGRESS.md), [Milestone 01 evidence](docs/FEASIBILITY.md), and [Milestone 02 verification](docs/MILESTONE02.md).
+
+## Selected text and the draft
+
+Select text in a supported application and press Alt + Shift + E. The new private popup prepares a draft headed “Regarding this selected text” and ending with “My question:”. Add your question and press Send yourself. Island never presses Send. With no selection, ChatGPT opens normally.
+
+Automatic preparation depends on the current ChatGPT composer. It waits at most about 15 seconds, only targets an empty editable composer on the exact ChatGPT home document, and attempts insertion once. It preserves an existing user draft. If preparation cannot be confirmed, a small trusted notice keeps the prepared text available: Select draft, Ctrl+C, Return to ChatGPT, Ctrl+V. Copying deliberately replaces your clipboard; check for an already inserted draft before pasting. No automatic clipboard write is used for handoff.
+
+The popup is borderless, with no application toolbar or title-bar buttons. Its starting size is 520 × 660 logical pixels, constrained to the source monitor's working area. Native Windows rounded corners/shadow are requested where supported; an exact 10px radius is not promised. Use Alt+F7 then arrow keys and Enter to move, or Alt+F8 to resize through the Windows system mechanism. Native resize borders are retained. Escape or Alt+Shift+E requests closure; Cancel preserves the draft and conversation. Confirm releases the pending selection/handoff and destroys the private WebView. Reopening uses a fresh profile, never the prior conversation.
+
+Preparing a draft places your selection in the real ChatGPT page, where its scripts can access it before you press Send. This is separate from submitting a message. Island makes no hidden handoff network requests, but does not control or guarantee the website's draft processing or network behavior. No selected text/draft is written to Island settings, files, logs or analytics. See [handoff details and evidence](docs/CHATGPT_HANDOFF.md).
