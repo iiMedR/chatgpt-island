@@ -26,13 +26,17 @@ pub fn initialize(app: &AppHandle) -> Result<(), String> {
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| {
-            let request = match event.id.as_ref() {
+            let command = event.id.as_ref();
+            eprintln!("Tray menu event received: {command}");
+            let request = match command {
                 "open" => Request::Open,
                 "settings" => Request::Settings,
                 "quit" => Request::Quit,
                 _ => return,
             };
-            let _ = app.state::<Controller>().send(request);
+            if let Err(error) = app.state::<Controller>().send(request) {
+                eprintln!("Tray command could not reach lifecycle service: {error}");
+            }
         })
         .on_tray_icon_event(|tray, event| {
             if matches!(

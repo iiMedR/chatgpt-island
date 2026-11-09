@@ -63,3 +63,7 @@ Runtime profile verification and unique directories are preserved. Lifecycle own
 - No Milestone 03 text capture, Milestone 04 handoff/polish or Milestone 05 installer work was implemented.
 
 Shutdown-only diagnostics were added after the remaining process was observed. The final Rust tests (15), formatting and strict Clippy passed again. At the final check, no new tray Quit request had appeared in the diagnostic log and the background process remained idle; the requested final user action is still pending.
+
+## Tray dispatch follow-up
+
+The user selected Quit again, but the inspected process remained alive and no Quit request appeared in the lifecycle log. Installed Tauri tray ownership/event registration was reviewed. Added a content-free trace of application menu identifiers and explicit reporting if enqueueing a tray command fails. Native compilation, all 15 Rust tests and strict Clippy pass. The final diagnostic build is running; confirmation of the exact physical tray menu and a new diagnostic trace is pending. This is not recorded as a successful Quit or a fixed defect.
