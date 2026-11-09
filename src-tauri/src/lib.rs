@@ -21,7 +21,9 @@ pub fn run() {
                     if let Ok(mut session) = state.lock() {
                         session.release(window.label());
                     }
-                    eprintln!("Private popup destroyed; profile retained pending safe offline cleanup.");
+                    eprintln!(
+                        "Private popup destroyed; profile retained pending safe offline cleanup."
+                    );
                 }
             }
         })

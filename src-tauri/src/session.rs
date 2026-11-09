@@ -9,26 +9,42 @@ pub struct Session {
 }
 impl Session {
     pub fn begin(&mut self, id: String) -> Result<(), String> {
-        if self.active.is_some() { return Err("A popup is active or being destroyed.".into()); }
+        if self.active.is_some() {
+            return Err("A popup is active or being destroyed.".into());
+        }
         self.active = Some(id);
         self.ready = false;
         self.closing = false;
         Ok(())
     }
-    pub fn active(&self) -> Option<&str> { self.active.as_deref() }
+    pub fn active(&self) -> Option<&str> {
+        self.active.as_deref()
+    }
     pub fn opened(&mut self, id: &str) {
-        if self.active() == Some(id) { self.ready = true; }
+        if self.active() == Some(id) {
+            self.ready = true;
+        }
     }
     pub fn request_close(&mut self) -> Result<String, String> {
-        if self.closing { return Err("Destruction already pending.".into()); }
+        if self.closing {
+            return Err("Destruction already pending.".into());
+        }
         let id = self.active.clone().ok_or("No popup is open.")?;
-        if !self.ready { return Err("Popup creation is still pending.".into()); }
+        if !self.ready {
+            return Err("Popup creation is still pending.".into());
+        }
         self.closing = true;
         Ok(id)
     }
-    pub fn close_failed(&mut self) { self.closing = false; }
+    pub fn close_failed(&mut self) {
+        self.closing = false;
+    }
     pub fn release(&mut self, id: &str) {
-        if self.active() == Some(id) { self.active = None; self.closing = false; self.ready = false; }
+        if self.active() == Some(id) {
+            self.active = None;
+            self.closing = false;
+            self.ready = false;
+        }
     }
 }
 
@@ -42,9 +58,11 @@ pub fn create_profile(root: &Path) -> Result<(String, PathBuf), String> {
 }
 
 pub fn allowed_navigation(url: &tauri::Url) -> bool {
-    url.scheme() == "https" && url.host_str() == Some("chatgpt.com")
+    url.scheme() == "https"
+        && url.host_str() == Some("chatgpt.com")
         && url.port_or_known_default() == Some(443)
-        && url.username().is_empty() && url.password().is_none()
+        && url.username().is_empty()
+        && url.password().is_none()
 }
 
 #[cfg(test)]
@@ -82,8 +100,17 @@ mod tests {
     #[test]
     fn only_chatgpt_https_navigation_is_allowed() {
         assert!(allowed_navigation(&CHATGPT_URL.parse().unwrap()));
-        assert!(allowed_navigation(&"https://chatgpt.com/c/test".parse().unwrap()));
-        for value in ["http://chatgpt.com", "https://chatgpt.com.evil.test", "https://evil.test", "tauri://localhost", "https://chatgpt.com:444", "https://user@chatgpt.com"] {
+        assert!(allowed_navigation(
+            &"https://chatgpt.com/c/test".parse().unwrap()
+        ));
+        for value in [
+            "http://chatgpt.com",
+            "https://chatgpt.com.evil.test",
+            "https://evil.test",
+            "tauri://localhost",
+            "https://chatgpt.com:444",
+            "https://user@chatgpt.com",
+        ] {
             assert!(!allowed_navigation(&value.parse().unwrap()), "{value}");
         }
     }
@@ -99,5 +126,16 @@ mod tests {
         std::fs::remove_dir(pa).unwrap();
         std::fs::remove_dir(pb).unwrap();
         std::fs::remove_dir(root).unwrap();
+    }
+    #[test]
+    fn profile_creation_does_not_overwrite_an_existing_file() {
+        let root = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+        std::fs::write(&root, "unrelated sentinel").unwrap();
+        assert!(create_profile(&root).is_err());
+        assert_eq!(
+            std::fs::read_to_string(&root).unwrap(),
+            "unrelated sentinel"
+        );
+        std::fs::remove_file(root).unwrap();
     }
 }
