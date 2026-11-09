@@ -383,9 +383,3 @@ h2 {
   outline: 3px solid #5b88b2;
   outline-offset: 5px;
 }
-.demo-fallback {
-  text-align: center;
-  margin: 12px 0 0;
-  font-size: 13px;
-  color: #67686b;
-}
