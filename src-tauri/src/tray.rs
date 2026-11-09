@@ -20,24 +20,11 @@ pub fn initialize(app: &AppHandle) -> Result<(), String> {
         .default_window_icon()
         .ok_or("Tray icon is missing; refusing invisible startup.")?
         .clone();
-    TrayIconBuilder::with_id("island-tray")
+    let icon = TrayIconBuilder::with_id("island-tray")
         .icon(icon)
         .tooltip("ChatGPT Island — Alt + Shift + E")
         .menu(&menu)
         .show_menu_on_left_click(false)
-        .on_menu_event(|app, event| {
-            let command = event.id.as_ref();
-            eprintln!("Tray menu event received: {command}");
-            let request = match command {
-                "open" => Request::Open,
-                "settings" => Request::Settings,
-                "quit" => Request::Quit,
-                _ => return,
-            };
-            if let Err(error) = app.state::<Controller>().send(request) {
-                eprintln!("Tray command could not reach lifecycle service: {error}");
-            }
-        })
         .on_tray_icon_event(|tray, event| {
             if matches!(
                 event,
@@ -52,5 +39,32 @@ pub fn initialize(app: &AppHandle) -> Result<(), String> {
         })
         .build(app)
         .map_err(|e| format!("Tray initialization failed: {e}"))?;
+    app.manage(TrayResources {
+        _icon: icon,
+        _menu: menu,
+        _items: vec![title, open, settings, quit],
+        _separator: separator,
+    });
     Ok(())
+}
+
+struct TrayResources {
+    _icon: tauri::tray::TrayIcon,
+    _menu: Menu<tauri::Wry>,
+    _items: Vec<MenuItem<tauri::Wry>>,
+    _separator: PredefinedMenuItem<tauri::Wry>,
+}
+
+pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
+    let command = event.id.as_ref();
+    eprintln!("Tray menu event received: {command}");
+    let request = match command {
+        "open" => Request::Open,
+        "settings" => Request::Settings,
+        "quit" => Request::Quit,
+        _ => return,
+    };
+    if let Err(error) = app.state::<Controller>().send(request) {
+        eprintln!("Tray command could not reach lifecycle service: {error}");
+    }
 }

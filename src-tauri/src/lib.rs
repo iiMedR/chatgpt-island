@@ -13,6 +13,7 @@ use tauri_plugin_global_shortcut::GlobalShortcutExt;
 pub fn run() {
     let app = tauri::Builder::default()
         .plugin(shortcuts::plugin())
+        .on_menu_event(tray::handle_menu_event)
         .invoke_handler(tauri::generate_handler![
             lifecycle::open_popup,
             lifecycle::close_popup,
