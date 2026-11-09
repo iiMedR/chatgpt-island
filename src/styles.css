@@ -1,0 +1,8 @@
+:root { font-family: system-ui, sans-serif; color: #202020; background: #f7f7f7; }
+body { margin: 28px; }
+main { max-width: 650px; }
+h1 { font-size: 24px; }
+p { line-height: 1.5; }
+button { padding: 10px 14px; margin: 0 8px 8px 0; cursor: pointer; }
+button:disabled { cursor: wait; }
+#message { white-space: pre-wrap; }
