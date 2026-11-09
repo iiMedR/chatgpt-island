@@ -1,3 +1,7 @@
+use crate::text_capture::{
+    self,
+    types::{Foreground, PendingSelection},
+};
 use std::path::PathBuf;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize)]
@@ -191,6 +195,17 @@ pub struct Core {
     pub settings: Settings,
     pub registration: crate::shortcuts::Registration,
     pub error: Option<String>,
+    pub pending_selection: PendingSelection,
+    pub capture_status: String,
+}
+impl Core {
+    fn destroyed(&mut self, id: &str) -> Effect {
+        self.pending_selection.clear_session(id);
+        if self.model.matches(id) {
+            self.capture_status = "No pending selection; session closed.".into();
+        }
+        self.model.destroyed(id)
+    }
 }
 pub struct Controller {
     sender: mpsc::Sender<Request>,
@@ -199,7 +214,8 @@ pub struct Controller {
 }
 pub enum Request {
     Open,
-    Toggle,
+    Toggle(Option<Foreground>),
+    OpenSelected(Option<Foreground>),
     Close,
     Quit,
     Settings,
@@ -211,12 +227,15 @@ pub enum Request {
         reply: Option<mpsc::Sender<Result<(), String>>>,
     },
     Reset(mpsc::Sender<Result<(), String>>),
+    ClipboardPreference(bool, mpsc::Sender<Result<(), String>>),
 }
 #[derive(serde::Serialize)]
 pub struct Snapshot {
     phase: Phase,
     session_id: Option<String>,
     skip_close_confirmation: bool,
+    clipboard_fallback_enabled: bool,
+    capture_status: String,
     shortcut_registered: bool,
     shortcut: &'static str,
     error: Option<String>,
@@ -234,6 +253,8 @@ impl Controller {
             settings,
             registration: crate::shortcuts::Registration::default(),
             error,
+            pending_selection: PendingSelection::default(),
+            capture_status: "No selection context.".into(),
         }));
         let exiting = Arc::new(AtomicBool::new(false));
         let (sender, receiver) = mpsc::channel();
@@ -279,6 +300,8 @@ impl Controller {
             phase: c.model.phase,
             session_id: c.model.profile.as_ref().map(|p| p.id.clone()),
             skip_close_confirmation: c.settings.skip_close_confirmation,
+            clipboard_fallback_enabled: c.settings.clipboard_fallback_enabled,
+            capture_status: c.capture_status.clone(),
             shortcut_registered: c.registration.registered,
             shortcut: "Alt + Shift + E",
             error: c.error.clone(),
@@ -303,6 +326,9 @@ fn focus(app: &AppHandle, label: &str) -> Result<(), String> {
     Ok(())
 }
 fn finish_exit(app: &AppHandle, shared: &Arc<Mutex<Core>>, exiting: &Arc<AtomicBool>) -> bool {
+    if let Ok(mut c) = shared.lock() {
+        c.pending_selection.clear();
+    }
     eprintln!("Application Quit: releasing global shortcut.");
     let mut registration = shared
         .lock()
@@ -397,6 +423,10 @@ fn handle_request(
     settings_path: &std::path::Path,
     request: Request,
 ) -> Result<bool, String> {
+    let capture_context = match &request {
+        Request::OpenSelected(context) => Some(*context),
+        _ => None,
+    };
     match request {
         Request::Settings => confirmation::show_settings(app)?,
         Request::Quit => {
@@ -404,18 +434,24 @@ fn handle_request(
             return close(app, shared, exiting, true);
         }
         Request::Close => return close(app, shared, exiting, false),
-        Request::Toggle => {
+        Request::Toggle(context) => {
             let phase = shared
                 .lock()
                 .map_err(|_| "Lifecycle state unavailable.")?
                 .model
                 .phase;
             if phase == Phase::Closed {
-                return handle_request(app, shared, exiting, settings_path, Request::Open);
+                return handle_request(
+                    app,
+                    shared,
+                    exiting,
+                    settings_path,
+                    Request::OpenSelected(context),
+                );
             }
             return close(app, shared, exiting, false);
         }
-        Request::Open => {
+        Request::Open | Request::OpenSelected(_) => {
             let (phase, id) = {
                 let c = shared.lock().map_err(|_| "Lifecycle state unavailable.")?;
                 (
@@ -447,6 +483,41 @@ fn handle_request(
                         .map_err(|_| "Lifecycle state unavailable.")?
                         .model
                         .begin(profile.clone());
+                    let fallback = shared
+                        .lock()
+                        .map_err(|_| "Lifecycle state unavailable.")?
+                        .settings
+                        .clipboard_fallback_enabled;
+                    let report = capture_context
+                        .map(|context| text_capture::coordinator::capture(context, fallback));
+                    let mut clipboard_warning = false;
+                    {
+                        let mut c = shared.lock().map_err(|_| "Lifecycle state unavailable.")?;
+                        c.pending_selection.clear();
+                        c.capture_status = "No selection context (opened without capture).".into();
+                        if let Some(report) = report {
+                            clipboard_warning = report.clipboard_warning;
+                            c.capture_status = if let Some(selection) = report.selection.as_ref() {
+                                format!(
+                                    "Selection captured: {} Unicode characters via {:?} in {} ms.",
+                                    selection.text.chars().count(),
+                                    selection.method,
+                                    report.elapsed_ms
+                                )
+                            } else if let Some(error) = report.error.as_ref() {
+                                format!("{} ({} ms)", error.message(), report.elapsed_ms)
+                            } else {
+                                format!("No selected text ({} ms).", report.elapsed_ms)
+                            };
+                            if clipboard_warning {
+                                c.error = Some("Copy fallback may have left copied text on the clipboard. Existing nonempty clipboard data was never replaced.".into());
+                            }
+                            c.pending_selection.replace(&id, report.selection);
+                        } else {
+                            c.pending_selection.replace(&id, None);
+                        }
+                    }
+                    // All capture and state storage finish before WebView creation/focus.
                     match popup::create(app, &profile) {
                         Ok(()) => shared
                             .lock()
@@ -454,6 +525,11 @@ fn handle_request(
                             .model
                             .opened(&id),
                         Err(error) => {
+                            shared
+                                .lock()
+                                .map_err(|_| "Lifecycle state unavailable.")?
+                                .pending_selection
+                                .clear_session(&id);
                             // A failed verification can leave a live native window. Keep
                             // ownership until its Destroyed event; never permit a duplicate.
                             if let Some(window) = app.get_webview_window(&id) {
@@ -482,6 +558,9 @@ fn handle_request(
                             return Err(error);
                         }
                     }
+                    if clipboard_warning {
+                        confirmation::show_settings(app)?;
+                    }
                 }
             }
         }
@@ -489,7 +568,6 @@ fn handle_request(
             let effect = shared
                 .lock()
                 .map_err(|_| "Lifecycle state unavailable.")?
-                .model
                 .destroyed(&id);
             eprintln!(
                 "Popup destroyed; application-owned profile retained for safe offline cleanup."
@@ -557,12 +635,35 @@ fn handle_request(
             }
         }
         Request::Reset(reply) => {
-            let result = settings::save(settings_path, &Settings::default());
+            let mut settings = shared
+                .lock()
+                .map_err(|_| "Lifecycle state unavailable.")?
+                .settings
+                .clone();
+            settings.skip_close_confirmation = false;
+            let result = settings::save(settings_path, &settings);
             if result.is_ok() {
                 shared
                     .lock()
                     .map_err(|_| "Lifecycle state unavailable.")?
-                    .settings = Settings::default();
+                    .settings = settings;
+            }
+            let _ = reply.send(result.clone());
+            result?;
+        }
+        Request::ClipboardPreference(enabled, reply) => {
+            let mut settings = shared
+                .lock()
+                .map_err(|_| "Lifecycle state unavailable.")?
+                .settings
+                .clone();
+            settings.clipboard_fallback_enabled = enabled;
+            let result = settings::save(settings_path, &settings);
+            if result.is_ok() {
+                shared
+                    .lock()
+                    .map_err(|_| "Lifecycle state unavailable.")?
+                    .settings = settings;
             }
             let _ = reply.send(result.clone());
             result?;
@@ -592,7 +693,8 @@ pub fn close_popup(app: AppHandle, window: WebviewWindow) -> Result<String, Stri
 #[tauri::command]
 pub fn popup_status(app: AppHandle, window: WebviewWindow) -> Result<String, String> {
     authorize(&window, &["main"])?;
-    Ok(format!("{:?}", app.state::<Controller>().snapshot()?.phase))
+    let snapshot = app.state::<Controller>().snapshot()?;
+    Ok(format!("{:?}; {}", snapshot.phase, snapshot.capture_status))
 }
 #[tauri::command]
 pub fn ui_snapshot(app: AppHandle, window: WebviewWindow) -> Result<Snapshot, String> {
@@ -635,4 +737,85 @@ pub async fn reset_warning(app: AppHandle, window: WebviewWindow) -> Result<(), 
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn set_clipboard_fallback(
+    app: AppHandle,
+    window: WebviewWindow,
+    enabled: bool,
+) -> Result<(), String> {
+    authorize(&window, &["settings"])?;
+    let (reply, receiver) = mpsc::channel();
+    app.state::<Controller>()
+        .send(Request::ClipboardPreference(enabled, reply))?;
+    tauri::async_runtime::spawn_blocking(move || {
+        receiver
+            .recv()
+            .map_err(|_| "Lifecycle service stopped.".to_string())?
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub fn selection_preview(app: AppHandle, window: WebviewWindow) -> Result<Option<String>, String> {
+    authorize(&window, &["main"])?;
+    if !cfg!(debug_assertions) || !std::env::args().any(|a| a == "--dev-selection-preview") {
+        return Err("Selection preview is disabled. Enable the explicit debug-only flag for non-sensitive fixtures.".into());
+    }
+    let state = app.state::<Controller>();
+    let core = state
+        .shared
+        .lock()
+        .map_err(|_| "Lifecycle state unavailable.")?;
+    Ok(core
+        .model
+        .profile
+        .as_ref()
+        .and_then(|profile| core.pending_selection.for_session(&profile.id))
+        .map(|selection| {
+            let _captured_at = selection.captured_at;
+            selection.text.clone()
+        }))
+}
+
+#[cfg(test)]
+mod selection_lifecycle_tests {
+    use super::*;
+    use crate::text_capture::types::{CaptureMethod, CapturedText};
+    #[test]
+    fn cancel_and_stale_destroy_preserve_selection_but_active_destroy_releases_it() {
+        let mut core = Core {
+            model: Model::default(),
+            settings: Settings::default(),
+            registration: Default::default(),
+            error: None,
+            pending_selection: Default::default(),
+            capture_status: String::new(),
+        };
+        core.model.begin(Profile {
+            id: "active".into(),
+            path: "unused".into(),
+        });
+        core.model.opened("active");
+        core.pending_selection.replace(
+            "active",
+            Some(CapturedText {
+                text: "non-sensitive fixture".into(),
+                captured_at: std::time::SystemTime::now(),
+                method: CaptureMethod::UiAutomation,
+            }),
+        );
+        core.model.close(false, false);
+        core.model.cancel();
+        assert!(core.pending_selection.for_session("active").is_some());
+        core.destroyed("stale");
+        assert!(core.pending_selection.for_session("active").is_some());
+        core.model.close(false, false);
+        core.model.confirm();
+        core.destroyed("active");
+        assert_eq!(core.model.phase, Phase::Closed);
+        assert!(core.pending_selection.for_session("active").is_none());
+    }
 }

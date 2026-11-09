@@ -2,16 +2,16 @@
 
 Windows Tauri 2 / Rust background utility using the actual ChatGPT website in a private WebView2 popup. No API key, custom chat interface, backend, OAuth or application account is required. Guest availability depends on ChatGPT and the current network/location.
 
-Milestone 01 guest feasibility is verified. Milestone 02 background/tray/shortcut implementation is in place; see [native verification results](docs/MILESTONE02.md) for passed and outstanding checks. Milestones 03–05 have not been implemented.
+Milestone 01 guest feasibility is verified. Milestone 02 remains partial pending tray Quit verification; see [native results](docs/MILESTONE02.md). Milestone 03 selected-text capture is implemented, with native compatibility and remaining verification recorded in [TEXT_CAPTURE_COMPATIBILITY.md](docs/TEXT_CAPTURE_COMPATIBILITY.md). Milestones 04–05 have not started.
 
 ## Use
 
 Start with `npm run tauri dev` during development. Normal startup creates a tray icon and **no launcher or popup**.
 
-- **Alt + Shift + E** opens a fresh private popup; pressing it again requests closure.
+- **Alt + Shift + E** captures explicitly selected text from a supported foreground control before opening a fresh private popup. With no selection it opens normally. Pressing it while open requests closure without recapturing.
 - **Escape** requests closure only inside the focused popup. It is handled natively by WebView2, not by website scripts or a global Escape shortcut.
 - Tray **Open ChatGPT Island** opens or focuses the current popup. Repeated opens do not replace a conversation.
-- Tray **Settings** shows shortcut status and the close-warning preference. **Show close warning again** resets that preference.
+- Tray **Settings** shows shortcut status, close-warning preference, content-free capture diagnostics, and an optional clipboard fallback switch (off by default). **Show close warning again** resets only the warning preference.
 - Tray **Quit** requests application exit, confirming conversation loss when a popup is open and warnings are enabled.
 - A normal left-click on the tray icon opens/focuses the popup; right-click opens its menu. Windows may place the icon under hidden icons.
 

@@ -7,6 +7,8 @@ fn main() {
             "ui_snapshot",
             "resolve_confirmation",
             "reset_warning",
+            "set_clipboard_fallback",
+            "selection_preview",
         ]),
     ))
     .expect("Tauri build configuration failed")

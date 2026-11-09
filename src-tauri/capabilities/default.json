@@ -3,6 +3,13 @@
   "identifier": "launcher",
   "description": "Local development launcher only; no remote origins or popup windows.",
   "local": true,
-  "windows": ["main"],
-  "permissions": ["allow-open-popup", "allow-close-popup", "allow-popup-status"]
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "allow-open-popup",
+    "allow-close-popup",
+    "allow-popup-status",
+    "allow-selection-preview"
+  ]
 }

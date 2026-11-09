@@ -5,9 +5,9 @@ const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'
 const config = JSON.parse(read('src-tauri/tauri.conf.json'));
 test('capabilities separate local UI roles and grant no remote/native plugin access', () => {
   const expected = {
-    'default.json': { windows: ['main'], permissions: ['allow-close-popup', 'allow-open-popup', 'allow-popup-status'] },
+    'default.json': { windows: ['main'], permissions: ['allow-close-popup', 'allow-open-popup', 'allow-popup-status', 'allow-selection-preview'] },
     'confirmation.json': { windows: ['confirmation'], permissions: ['allow-resolve-confirmation'] },
-    'settings.json': { windows: ['settings'], permissions: ['allow-reset-warning', 'allow-ui-snapshot'] },
+    'settings.json': { windows: ['settings'], permissions: ['allow-reset-warning', 'allow-set-clipboard-fallback', 'allow-ui-snapshot'] },
   };
   assert.deepEqual(readdirSync(new URL('../src-tauri/capabilities/', import.meta.url)).sort(), Object.keys(expected).sort());
   for (const [file, role] of Object.entries(expected)) {

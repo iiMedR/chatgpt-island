@@ -91,7 +91,7 @@ Each popup uses incognito plus a unique application-owned profile directory. Saf
 Normal `npm run tauri dev` launches the tray utility with no local window. Press Alt + Shift + E or use the tray menu. Right-click the icon (possibly in hidden icons) for Open, Settings and Quit. The optional debug launcher is:
 
 ```powershell
-npm run tauri dev -- -- --dev-launcher
+npm run tauri dev -- -- -- --dev-launcher
 ```
 
 The launcher is not part of normal startup. Its native X requests Quit; Request close follows the same confirmation policy as the shortcut. Closing Settings leaves the background app alive.
@@ -102,8 +102,28 @@ Lifecycle transitions are covered by Rust tests. For native diagnosis, use the l
 
 Escape is handled by the popup controller's native AcceleratorKeyPressed callback, not global registration. Test once in the focused popup and once in another application. It intentionally takes precedence over the website's own Escape handling. Local confirmation Escape cancels. Never add privileged webpage IPC as a workaround.
 
-Settings are stored in the app configuration directory, normally `%APPDATA%\com.chatgptisland.dev\settings.json`. Only skip_close_confirmation is allowed. Use Settings -> Show close warning again to reset; do not modify cookies or other browser profiles. Cancel must not persist the checkbox. Confirm with the checkbox must survive app restart. Filesystem errors must preserve the live conversation.
+Settings are stored in the app configuration directory, normally `%APPDATA%\com.chatgptisland.dev\settings.json`. Only skip_close_confirmation and clipboard_fallback_enabled are allowed. Both default to false; old one-field settings migrate without enabling copy. Use Settings -> Show close warning again to reset; do not modify cookies or other browser profiles. Cancel must not persist the checkbox. Confirm with the checkbox must survive app restart. Filesystem errors must preserve the live conversation.
 
 For shutdown testing, Tray Quit with a popup should confirm when warnings are enabled; Cancel must keep both app and conversation. Confirm must destroy the popup and exit. Verify no app-owned WebView2 processes remain, then verify a subsequent process can register the shortcut. Do not treat OS force termination as proof of orderly unregistration or tray Quit behavior.
 
 The automation tool in this session can target native application windows but does not expose the taskbar. Tests of physical tray menu interaction therefore require a user action if no targetable shell surface is available. Record those tests accurately instead of inferring success from TrayIconBuilder compilation.
+
+
+## Milestone 03 native capture diagnostics
+
+Use non-sensitive fixtures only. Docker checks TypeScript, capability boundaries and builds; Windows checks COM/UIA, clipboard and shortcuts. Do not infer application compatibility from unit tests. See TEXT_CAPTURE_COMPATIBILITY.md for observations and remaining tests.
+
+For an explicit sample preview, ensure only one Island process owns the shortcut, run Vite (`npm run dev`) in one terminal, then in another:
+
+```powershell
+cd src-tauri
+cargo run --locked -- --dev-launcher --dev-selection-preview
+```
+
+The preview requires both a debug build and the explicit flag. Select sample text in another application, press Alt + Shift + E, return to the launcher and click Refresh sample selection preview. The status reports method, character count and elapsed capture milliseconds, without text. The website never receives the selection. Close the popup, verify Closed, then verify no pending selection on another preview request. Avoid saving preview screenshots containing personal text.
+
+UIA failures may mean unsupported selection patterns, an inaccessible control, integrity-level restrictions, a changed foreground window, or a provider timeout. Island does not elevate or enable accessibility modes automatically. Keep the source foreground until capture completes. A visible selection does not guarantee provider support (see the VS Code result). There is no continuous monitoring or clipboard polling outside an explicit capture attempt.
+
+To test copy fallback, enable it yourself in the trusted Settings window after reading its explanation; it is a privacy preference. It only operates if UIA proves a selection but GetText fails, and the clipboard is empty. Do not clear personal clipboard data just to force a test. Use an isolated non-sensitive test session and a known compatible provider. Existing text/rich text/image/file formats must cause refusal. For concurrent updates, verify changed sequence/owner prevents restoration. For delayed rendering or failed restoration, expect a trusted warning and inspect the clipboard yourself. Mock tests cover these decisions; they do not establish native clipboard-manager compatibility. Disable the preference when finished.
+
+The settings migration accepts the prior one-boolean file and never enables fallback implicitly. Selected text is not part of the serialized settings schema. Native test execution may need the normal Windows process context because the Codex filesystem sandbox can deny MoveFileExW on test temporary files; this is a test-environment restriction, not permission to weaken atomic preference writes.

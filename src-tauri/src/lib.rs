@@ -4,6 +4,7 @@ mod popup;
 mod session;
 mod settings;
 mod shortcuts;
+mod text_capture;
 mod tray;
 use lifecycle::{Controller, Request};
 use std::sync::atomic::Ordering;
@@ -20,7 +21,9 @@ pub fn run() {
             lifecycle::popup_status,
             lifecycle::ui_snapshot,
             lifecycle::resolve_confirmation,
-            lifecycle::reset_warning
+            lifecycle::reset_warning,
+            lifecycle::set_clipboard_fallback,
+            lifecycle::selection_preview
         ])
         .setup(|app| {
             Controller::install(app.handle())?;
@@ -87,4 +90,8 @@ pub fn run() {
             std::process::exit(1);
         }
     }
+}
+
+pub fn run_capture_helper_if_requested() -> bool {
+    text_capture::coordinator::run_helper_if_requested()
 }

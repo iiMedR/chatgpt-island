@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-selection-preview"
+description = "Enables the selection_preview command without any pre-configured scope."
+commands.allow = ["selection_preview"]
+
+[[permission]]
+identifier = "deny-selection-preview"
+description = "Denies the selection_preview command without any pre-configured scope."
+commands.deny = ["selection_preview"]

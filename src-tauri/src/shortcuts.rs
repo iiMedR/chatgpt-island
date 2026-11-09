@@ -23,7 +23,19 @@ pub fn plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
     tauri_plugin_global_shortcut::Builder::new()
         .with_handler(move |app, key, event| {
             if key == &shortcut() && latch.event(event.state() == ShortcutState::Pressed) {
-                let _ = app.state::<Controller>().send(Request::Toggle);
+                let controller = app.state::<Controller>();
+                let closed = controller
+                    .shared
+                    .lock()
+                    .map(|core| core.model.phase == crate::lifecycle::Phase::Closed)
+                    .unwrap_or(false);
+                // Snapshot foreground context synchronously before any popup focus.
+                let context = if closed {
+                    crate::text_capture::foreground()
+                } else {
+                    None
+                };
+                let _ = controller.send(Request::Toggle(context));
             }
         })
         .build()

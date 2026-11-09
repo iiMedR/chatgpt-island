@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 interface Snapshot {
+  clipboard_fallback_enabled: boolean;
+  capture_status: string;
   phase: string;
   session_id: string | null;
   skip_close_confirmation: boolean;
@@ -34,14 +36,26 @@ export async function showConfirmation() {
 export async function showSettings() {
   document.title = "ChatGPT Island — Settings";
   root().innerHTML = `<h1>ChatGPT Island</h1><p>Settings</p><dl><dt>Global shortcut</dt><dd id="shortcut"></dd><dt>Close warning</dt><dd id="warning"></dd></dl>
-    <button id="reset">Show close warning again</button><p id="status" role="status"></p><p id="error" role="alert"></p>`;
+    <button id="reset">Show close warning again</button>
+    <h2>Selected text</h2><label class="check"><input type="checkbox" id="clipboard"> Allow clipboard fallback</label>
+    <p>Off by default. If accessibility identifies a selection but cannot read it, this sends Ctrl+C and temporarily reads the copy. It requires an empty clipboard to protect existing formats. Clipboard managers and delayed copies may prevent restoration.</p>
+    <p id="capture" role="status"></p><p id="status" role="status"></p><p id="error" role="alert"></p>`;
   const error = document.querySelector<HTMLElement>("#error")!;
   async function refresh() {
     const state = await invoke<Snapshot>("ui_snapshot");
     document.querySelector<HTMLElement>("#shortcut")!.textContent = `${state.shortcut} — ${state.shortcut_registered ? "registered" : "unavailable; use the tray menu"}`;
     document.querySelector<HTMLElement>("#warning")!.textContent = state.skip_close_confirmation ? "Disabled" : "Enabled";
     error.textContent = state.error ?? "";
+    document.querySelector<HTMLInputElement>("#clipboard")!.checked = state.clipboard_fallback_enabled;
+    document.querySelector<HTMLElement>("#capture")!.textContent = state.capture_status;
   }
+  const clipboard = document.querySelector<HTMLInputElement>("#clipboard")!;
+  clipboard.onchange = async () => {
+    clipboard.disabled = true;
+    try { await invoke("set_clipboard_fallback", { enabled: clipboard.checked }); await refresh(); }
+    catch (e) { error.textContent = String(e); }
+    finally { clipboard.disabled = false; }
+  };
   const reset = document.querySelector<HTMLButtonElement>("#reset")!;
   reset.onclick = async () => {
     reset.disabled = true;

@@ -17,7 +17,7 @@
 
 1. **Foundation & Guest ChatGPT Feasibility:** verified on the tested host/network. See FEASIBILITY.md. Safe profile-retention limits remain documented.
 2. **Background App, System Tray & Shortcuts:** implemented; verification is recorded in MILESTONE02.md. Includes typed lifecycle, native Escape, trusted close warning, persistent boolean preference and Settings reset. Full completion depends on verified tray Quit and shortcut release.
-3. **System-Wide Text Selection:** not started. No selected-text capture or clipboard interception exists.
+3. **System-Wide Text Selection:** implemented with bounded UI Automation, opt-in empty-clipboard fallback, Unicode validation and session-scoped memory. Native compatibility and outstanding tests are recorded in TEXT_CAPTURE_COMPATIBILITY.md; universal support is not claimed. Nothing is inserted or submitted to ChatGPT.
 4. **ChatGPT Handoff & Popup Polish:** not started. No automatic composer insertion, final borderless window or final corner treatment exists.
 5. **Testing, Reliability & Windows Installer:** not started. No installer generation or public distribution is enabled.
 

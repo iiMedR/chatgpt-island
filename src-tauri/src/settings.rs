@@ -2,15 +2,17 @@ use serde::{Deserialize, Serialize};
 use std::{fs, io::Write, path::Path};
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(deny_unknown_fields)]
+#[serde(default, deny_unknown_fields)]
 pub struct Settings {
     pub skip_close_confirmation: bool,
+    pub clipboard_fallback_enabled: bool,
 }
 
 impl Settings {
     pub fn after_decision(&self, confirmed: bool, skip: bool) -> Self {
         Self {
             skip_close_confirmation: self.skip_close_confirmation || (confirmed && skip),
+            clipboard_fallback_enabled: self.clipboard_fallback_enabled,
         }
     }
 }
@@ -104,13 +106,14 @@ mod tests {
             &path,
             &Settings {
                 skip_close_confirmation: true,
+                ..Settings::default()
             },
         )
         .unwrap();
         assert!(load(&path).0.skip_close_confirmation);
         assert_eq!(
             fs::read_to_string(&path).unwrap(),
-            r#"{"skip_close_confirmation":true}"#
+            r#"{"skip_close_confirmation":true,"clipboard_fallback_enabled":false}"#
         );
         save(&path, &Settings::default()).unwrap();
         assert_eq!(load(&path).0, Settings::default());
@@ -125,5 +128,24 @@ mod tests {
         assert_eq!(current.after_decision(false, false), current);
         assert_eq!(current.after_decision(true, false), current);
         assert!(current.after_decision(true, true).skip_close_confirmation);
+    }
+    #[test]
+    fn old_settings_keep_copy_disabled_and_warning_changes_preserve_opt_in() {
+        let old: Settings = serde_json::from_str(r#"{"skip_close_confirmation":true}"#).unwrap();
+        assert!(!old.clipboard_fallback_enabled);
+        let enabled = Settings {
+            clipboard_fallback_enabled: true,
+            ..Settings::default()
+        };
+        assert!(
+            enabled
+                .after_decision(true, true)
+                .clipboard_fallback_enabled
+        );
+        assert!(
+            enabled
+                .after_decision(false, false)
+                .clipboard_fallback_enabled
+        );
     }
 }

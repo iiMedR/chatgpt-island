@@ -11,5 +11,6 @@ button:disabled { cursor: wait; opacity: .6; }
 .check { display: flex; gap: 8px; align-items: center; }
 #error { color: #9b2424; font-size: 13px; margin: 8px 0; }
 #message { white-space: pre-wrap; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow: auto; }
 dt { font-weight: 600; margin-top: 12px; }
 dd { margin: 5px 0 16px; }

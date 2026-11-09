@@ -55,7 +55,7 @@ pub fn show_settings(app: &AppHandle) -> Result<(), String> {
         "ChatGPT Island - Settings",
         "view=settings",
         500.0,
-        350.0,
+        590.0,
     )
 }
 pub fn show_launcher(app: &AppHandle) -> Result<(), String> {
