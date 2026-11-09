@@ -369,15 +369,22 @@ h2 {
   font-size: 17px;
   line-height: 1.5;
 }
+.demo-frame {
+  overflow: hidden;
+  aspect-ratio: 73 / 45;
+  border: 2px solid #e1dfdc;
+  border-radius: 17px;
+  background: #fbfaf9;
+  box-shadow: 0 12px 36px #0000000d;
+}
 .demo-section video {
   display: block;
   width: 100%;
-  height: auto;
-  aspect-ratio: 73 / 45;
-  background: #181818;
-  border: 1px solid #d1d0d0;
-  border-radius: 17px;
-  box-shadow: 0 12px 36px #0000000d;
+  height: 100%;
+  object-fit: cover;
+  /* Trim a few edge pixels from the recording without re-encoding it. */
+  transform: scale(1.008);
+  border: 0;
 }
 .demo-section video:focus-visible {
   outline: 3px solid #5b88b2;

@@ -48,22 +48,24 @@
       Select text, press Alt + Shift + E, then add your question. A 38-second demo, with no
       narration.
     </p>
-    <video
-      playsinline
-      autoplay
-      [muted]="true"
-      loop
-      preload="auto"
-      poster="/assets/demo/poster.jpg"
-      width="1752"
-      height="1080"
-      aria-label="ChatGPT Island application demo"
-      aria-describedby="demo-description"
-    >
-      <source src="/assets/demo/chatgpt-island.mp4" type="video/mp4" />
-      Your browser does not support embedded video.
-      <a href="/assets/demo/chatgpt-island.mp4">Download the demo video</a>.
-    </video>
+    <div class="demo-frame">
+      <video
+        playsinline
+        autoplay
+        [muted]="true"
+        loop
+        preload="auto"
+        poster="/assets/demo/poster.jpg"
+        width="1752"
+        height="1080"
+        aria-label="ChatGPT Island application demo"
+        aria-describedby="demo-description"
+      >
+        <source src="/assets/demo/chatgpt-island.mp4" type="video/mp4" />
+        Your browser does not support embedded video.
+        <a href="/assets/demo/chatgpt-island.mp4">Download the demo video</a>.
+      </video>
+    </div>
   </section>
 
   <section class="how-it-works container" id="how-it-works" aria-labelledby="how-title">
