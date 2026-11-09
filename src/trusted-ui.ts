@@ -56,8 +56,12 @@ export async function showSettings() {
     <button id="reset">Show close warning again</button>
     <h2>Selected text</h2><label class="check"><input type="checkbox" id="clipboard"> Allow clipboard fallback</label>
     <p>Off by default. If accessibility identifies a selection but cannot read it, this sends Ctrl+C and temporarily reads the copy. It requires an empty clipboard to protect existing formats. Clipboard managers and delayed copies may prevent restoration.</p>
+    <button id="manual">Open manual handoff</button>
     <p id="capture" role="status"></p><p id="status" role="status"></p><p id="error" role="alert"></p>`;
   const error = document.querySelector<HTMLElement>("#error")!;
+  document.querySelector<HTMLButtonElement>("#manual")!.onclick = async () => {
+    try { await invoke("show_manual_handoff"); } catch (e) { error.textContent = String(e); }
+  };
   async function refresh() {
     const state = await invoke<Snapshot>("ui_snapshot");
     document.querySelector<HTMLElement>("#shortcut")!.textContent = `${state.shortcut} — ${state.shortcut_registered ? "registered" : "unavailable; use the tray menu"}`;

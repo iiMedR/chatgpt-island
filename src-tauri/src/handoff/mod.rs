@@ -198,24 +198,9 @@ pub fn start(app: &AppHandle, id: &str) {
         if active(&app, &id, &cancel) {
             set_status(&app, &id, Status::Failed);
             // Never retry an uncertain insertion. Preserve selection for deliberate manual copy.
-            show_failed_notice(&app, &id);
+            // Keep failures silent; the user may open manual handoff from Settings.
         }
     });
-}
-pub fn show_failed_notice(app: &AppHandle, id: &str) {
-    let failed = app.state::<Controller>().shared.lock().is_ok_and(|c| {
-        c.model.matches(id)
-            && c.model.phase == Phase::Open
-            && c.handoff
-                .as_ref()
-                .is_some_and(|h| h.session == id && h.status == Status::Failed)
-    });
-    if failed {
-        // Serialize notice creation with closure/destruction to avoid stale windows.
-        let _ = app
-            .state::<Controller>()
-            .send(crate::lifecycle::Request::HandoffFailed(id.into()));
-    }
 }
 #[derive(serde::Serialize)]
 pub struct Notice {

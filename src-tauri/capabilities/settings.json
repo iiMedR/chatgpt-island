@@ -9,6 +9,7 @@
   "permissions": [
     "allow-ui-snapshot",
     "allow-reset-warning",
-    "allow-set-clipboard-fallback"
+    "allow-set-clipboard-fallback",
+    "allow-show-manual-handoff"
   ]
 }

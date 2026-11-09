@@ -47,3 +47,5 @@ Detailed observations, interrupted tests and remaining verification are in MILES
 Final M3 verification: formatting applied and `cargo check --locked` passed after the final clipboard error/transport guards. Windows reported incremental-cache hard-link fallback to copying; compilation succeeded. No further test-suite or native UI runs were made after the user requested testing stop. The 26-test and Docker results above refer to the completed earlier runs. No captured user data or runtime artifacts are included in the commit.
 
 Final M4 integration compiled successfully after serializing fallback notices with popup destruction. No repeated suite or compatibility sweep was performed. Full implementation/evidence/limits are in CHATGPT_HANDOFF.md. Milestone 05 remains unstarted.
+
+User-requested UX fix: removed automatic manual-handoff windows. Failed/uncertain preparation leaves only the ChatGPT popup; the optional notice is now available explicitly from Settings → Open manual handoff. Release rebuilt; no repeated test suites.

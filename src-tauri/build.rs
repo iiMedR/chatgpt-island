@@ -7,6 +7,7 @@ fn main() {
             "ui_snapshot",
             "resolve_confirmation",
             "reset_warning",
+            "show_manual_handoff",
             "set_clipboard_fallback",
             "selection_preview",
             "handoff_snapshot",

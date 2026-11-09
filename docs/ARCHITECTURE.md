@@ -109,3 +109,5 @@ A failed handoff preserves the M3 selection and opens the exact-label local `han
 Preparing website input exposes it to that site's JavaScript. No submitted-message action or app handoff request occurs, but website-side processing before submission cannot be guaranteed absent. Private mode, no app persistence, memory release and remote retention are distinct properties. Profile directories remain unique and retained for safe offline cleanup; no unsafe deletion protocol was added.
 
 References: [Microsoft WebView2 security](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/security), [WebView2 script execution](https://learn.microsoft.com/en-us/microsoft-edge/hosting/webview2/gettingstarted), [native rounded corners](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/ui/apply-rounded-corners).
+
+Manual handoff notice behavior was subsequently changed at user request: preparation failure records Failed silently. Only the trusted Settings command can enqueue ShowHandoff for the active session. No automatic fallback window is created; its local capability and deliberate copy flow are retained for optional use.

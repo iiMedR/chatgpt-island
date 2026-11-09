@@ -8,7 +8,7 @@ test('capabilities separate local UI roles and grant no remote/native plugin acc
     'handoff.json': { windows: ['handoff'], permissions: ['allow-handoff-focus', 'allow-handoff-snapshot'] },
     'default.json': { windows: ['main'], permissions: ['allow-close-popup', 'allow-open-popup', 'allow-popup-status', 'allow-selection-preview'] },
     'confirmation.json': { windows: ['confirmation'], permissions: ['allow-resolve-confirmation'] },
-    'settings.json': { windows: ['settings'], permissions: ['allow-reset-warning', 'allow-set-clipboard-fallback', 'allow-ui-snapshot'] },
+    'settings.json': { windows: ['settings'], permissions: ['allow-reset-warning', 'allow-set-clipboard-fallback', 'allow-show-manual-handoff', 'allow-ui-snapshot'] },
   };
   assert.deepEqual(readdirSync(new URL('../src-tauri/capabilities/', import.meta.url)).sort(), Object.keys(expected).sort());
   for (const [file, role] of Object.entries(expected)) {

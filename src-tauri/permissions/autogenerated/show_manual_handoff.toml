@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-show-manual-handoff"
+description = "Enables the show_manual_handoff command without any pre-configured scope."
+commands.allow = ["show_manual_handoff"]
+
+[[permission]]
+identifier = "deny-show-manual-handoff"
+description = "Denies the show_manual_handoff command without any pre-configured scope."
+commands.deny = ["show_manual_handoff"]

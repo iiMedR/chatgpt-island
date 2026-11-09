@@ -50,3 +50,7 @@ The current mobile textarea path was verified. Desktop contenteditable, localize
 Milestone 05 would cover reliability, remaining platform/compatibility cases and Windows packaging/installer. It was not begun here.
 
 Final integration note: fallback-notice creation is serialized through the lifecycle queue so a closing session cannot leave a late notice over a new popup. Final `cargo check --locked` passed after that adjustment; the test suites were not repeated. Windows incremental-cache hard links fell back to copying without a compilation failure. The sample question remains an unsent draft in the native popup for optional user review.
+
+## Current behavior update — manual notice only
+
+The manual-handoff window no longer opens automatically, including when insertion verification is uncertain or after cancelling a close. The ChatGPT popup stays on its own. The pending draft remains in memory and can be accessed explicitly through tray Settings → Open manual handoff. This supersedes the automatic fallback notice described in the initial M4 observations above. No clipboard data is changed automatically. Release rebuilt without rerunning the test suites, as requested.

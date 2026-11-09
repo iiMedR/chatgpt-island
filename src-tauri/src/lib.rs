@@ -24,6 +24,7 @@ pub fn run() {
             lifecycle::ui_snapshot,
             lifecycle::resolve_confirmation,
             lifecycle::reset_warning,
+            lifecycle::show_manual_handoff,
             lifecycle::set_clipboard_fallback,
             lifecycle::selection_preview,
             handoff::handoff_snapshot,

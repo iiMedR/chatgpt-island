@@ -225,7 +225,7 @@ pub enum Request {
     Close,
     Quit,
     Settings,
-    HandoffFailed(String),
+    ShowHandoff(String),
     MoveResize(bool),
     Destroyed(String),
     Decision {
@@ -449,13 +449,13 @@ fn handle_request(
     };
     match request {
         Request::Settings => confirmation::show_settings(app)?,
-        Request::HandoffFailed(id) => {
+        Request::ShowHandoff(id) => {
             let show = shared
                 .lock()
                 .map_err(|_| "State unavailable.")?
                 .handoff
                 .as_ref()
-                .is_some_and(|h| h.session == id && h.status == crate::handoff::Status::Failed);
+                .is_some_and(|h| h.session == id);
             let current = shared.lock().map_err(|_| "State unavailable.")?;
             let show = show && current.model.matches(&id) && current.model.phase == Phase::Open;
             drop(current);
@@ -671,7 +671,6 @@ fn handle_request(
                 };
                 if !confirm {
                     focus(app, &session_id)?;
-                    crate::handoff::show_failed_notice(app, &session_id);
                 }
                 Ok(effect)
             })();
@@ -793,6 +792,23 @@ pub async fn reset_warning(app: AppHandle, window: WebviewWindow) -> Result<(), 
     })
     .await
     .map_err(|e| e.to_string())?
+}
+#[tauri::command]
+pub fn show_manual_handoff(app: AppHandle, window: WebviewWindow) -> Result<(), String> {
+    authorize(&window, &["settings"])?;
+    let controller = app.state::<Controller>();
+    let id = controller.session_id().ok_or("No active popup.")?;
+    if controller
+        .shared
+        .lock()
+        .map_err(|_| "State unavailable.")?
+        .pending_selection
+        .for_session(&id)
+        .is_none()
+    {
+        return Err("This popup has no selected text.".into());
+    }
+    controller.send(Request::ShowHandoff(id))
 }
 
 #[tauri::command]
