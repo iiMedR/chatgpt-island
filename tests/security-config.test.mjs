@@ -25,7 +25,10 @@ test('capabilities separate local UI roles and grant no remote/native plugin acc
 });
 test('normal startup creates no windows and development remains loopback-only', () => {
   assert.equal(config.build.devUrl, 'http://127.0.0.1:1420');
-  assert.equal(config.bundle.active, false);
+  assert.equal(config.bundle.active, true);
+  assert.deepEqual(config.bundle.targets, ['nsis']);
+  assert.equal(config.bundle.windows.nsis.installMode, 'currentUser');
+  assert.equal(config.bundle.windows.webviewInstallMode.type, 'embedBootstrapper');
   assert.deepEqual(config.app.windows, []);
   assert.match(read('vite.config.ts'), /host: "127\.0\.0\.1"/);
 });

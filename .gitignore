@@ -10,3 +10,18 @@ src-tauri/gen/
 .DS_Store
 
 .setup/
+
+# Local release outputs and private/runtime data
+artifacts/
+release-output/
+*.pdb
+*.msi
+*-setup.exe
+*.sha256
+*.pfx
+*.p12
+*.key
+*.pem
+private-sessions/
+**/private-sessions/
+settings.json

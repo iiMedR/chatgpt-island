@@ -1,2 +1,6 @@
 *.sh text eol=lf
 *.ps1 text eol=crlf
+*.yml text eol=lf
+assets/third-party/*.txt text eol=lf -whitespace
+assets/third-party/sources.json text eol=lf
+src-tauri/THIRD_PARTY_NOTICES.txt text eol=lf -whitespace

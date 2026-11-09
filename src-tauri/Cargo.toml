@@ -1,7 +1,9 @@
 [package]
 name = "chatgpt-island"
 version = "0.1.0"
-description = "Private WebView2 feasibility prototype"
+description = "Independent Windows selected-text helper with a private ChatGPT popup."
+license = "MIT"
+repository = "https://github.com/iiMedR/chatgpt-island"
 
 edition = "2024"
 

@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://127.0.0.1:1420",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run build && node scripts/release-notices.mjs",
     "frontendDist": "../dist"
   },
   "app": {
@@ -17,14 +17,44 @@
     }
   },
   "bundle": {
-    "active": false,
-    "targets": "all",
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "publisher": "ChatGPT Island contributors",
+    "category": "Productivity",
+    "shortDescription": "Selected text in a private floating ChatGPT window.",
+    "longDescription": "Independent Windows utility. Not affiliated with, endorsed by, or sponsored by OpenAI.",
+    "license": "MIT",
+    "licenseFile": "../LICENSE",
+    "resources": {
+      "../LICENSE": "LICENSE",
+      "THIRD_PARTY_NOTICES.txt": "THIRD_PARTY_NOTICES.txt"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
-      "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "allowDowngrades": false,
+      "webviewInstallMode": {
+        "type": "embedBootstrapper",
+        "silent": true
+      },
+      "minimumWebview2Version": "110.0.1587.40",
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "languages": [
+          "English"
+        ],
+        "displayLanguageSelector": false,
+        "compression": "lzma",
+        "startMenuFolder": "ChatGPT Island"
+      }
+    }
   }
 }

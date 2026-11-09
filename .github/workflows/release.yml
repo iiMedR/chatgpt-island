@@ -1,0 +1,88 @@
+name: Windows release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+
+permissions: {}
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+      RUSTUP_TOOLCHAIN: 1.99.1
+      CARGO_INCREMENTAL: '0'
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.22.1'
+      - name: Validate stable version tag
+        run: |
+          if ($env:RELEASE_TAG -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw 'Only stable vMAJOR.MINOR.PATCH tags are supported.' }
+          node scripts/check-release.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Install pinned Rust toolchain
+        run: |
+          rustup toolchain install 1.99.1 --profile minimal --component rustfmt --component clippy
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          rustup target add x86_64-pc-windows-msvc
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Install locked JavaScript dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Windows verification
+        run: .\scripts\verify.ps1
+      - name: Build NSIS and checksums
+        run: .\scripts\build-release.ps1
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: windows-x64-release
+          path: |
+            artifacts/release/ChatGPT-Island-Windows-x64-Setup.exe
+            artifacts/release/SHA256SUMS.txt
+            artifacts/release/release-manifest.json
+          if-no-files-found: error
+          retention-days: 14
+
+  draft-release:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      # No checkout or project code runs with the write-capable token.
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: windows-x64-release
+          path: artifacts
+      - name: Verify artifact and create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          cd artifacts
+          test "$(find . -maxdepth 1 -type f | wc -l)" -eq 3
+          sha256sum --check SHA256SUMS.txt
+          printf '%s\n' 'Unsigned Windows x64 installer. Requires manual installation/upgrade/uninstall acceptance before publication.' 'Independent project; not affiliated with OpenAI. Review CHANGELOG.md and docs/RELEASING.md before publishing.' > ../release-notes.txt
+          gh release create "$RELEASE_TAG" --repo "$GH_REPO" --verify-tag --draft --title "ChatGPT Island $RELEASE_TAG" --notes-file ../release-notes.txt \
+            ChatGPT-Island-Windows-x64-Setup.exe SHA256SUMS.txt release-manifest.json
