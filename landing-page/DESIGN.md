@@ -2,7 +2,7 @@
 
 Approved concept: `../assets/design/landing-page-concept.png` (973 × 1616).
 
-The supplied real demo video now replaces the original static selection-to-draft illustration, as requested. It uses native controls, a preview frame, and no autoplay or initial video preload. The implementation otherwise preserves the off-white palette, palm branding, centered three-line headline, primary black download button, shortcut keycaps, selection-to-draft illustration, three numbered steps, feature stripe, and independence disclosure. Text and controls are native Angular/HTML; the concept image is a design reference and is not loaded by the site.
+The supplied real demo video now replaces the original static selection-to-draft illustration, as requested. It uses native controls, a preview frame, and muted autoplay, looping, and automatic video preload. The implementation otherwise preserves the off-white palette, palm branding, centered three-line headline, primary black download button, shortcut keycaps, selection-to-draft illustration, three numbered steps, feature stripe, and independence disclosure. Text and controls are native Angular/HTML; the concept image is a design reference and is not loaded by the site.
 
 The main components are `App` (page and privacy dialog), `DownloadButton` (direct installer link), `Icon`, and release URL constants (installer and checksum). OnPush keeps rendering simple. No router, backend, ChatGPT embedding, or desktop Tauri bridge is needed.
 
