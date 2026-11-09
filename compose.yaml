@@ -1,0 +1,10 @@
+services:
+  dev:
+    build: .
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # Source is copied into the image. Rebuild after source/lockfile changes.
+    # No host directories, browser profiles, Docker socket or ports are exposed.

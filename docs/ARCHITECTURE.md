@@ -17,7 +17,7 @@ The app stores only a session label, not a long-lived WebView handle. Browser re
 
 ## Private WebView configuration
 
-WebviewWindowBuilder uses External(https://chatgpt.com/), 900 x 650 logical pixels, centered, resizable, decorated, incognito(true), data_directory(unique_path), and disabled developer tools. Tauri 2.12.5 runtime source keys WebContext entries by data directory and forwards incognito to Wry. Wry upstream Windows source uses WebView2 controller options SetIsInPrivateModeEnabled and the data directory for environment creation. The inspected upstream Wry source also contains an older-environment fallback without that option. Actual resolved Wry version and runtime private-mode behavior must be verified after Cargo is available; no runtime guarantee is claimed from source inspection alone.
+WebviewWindowBuilder uses External(https://chatgpt.com/), 900 x 650 logical pixels, centered, resizable, decorated, incognito(true), data_directory(unique_path), and disabled developer tools. Tauri 2.12.5 runtime source keys WebContext entries by data directory and forwards incognito to Wry. Wry upstream Windows source uses WebView2 controller options SetIsInPrivateModeEnabled and the data directory for environment creation. The inspected upstream Wry source also contains an older-environment fallback without that option. The follow-up Cargo.lock resolves Wry 0.57.1. Its installed source contains the same controller-option call and fallback. Native code now checks the actual profile private-mode flag; see the feasibility report for observed runtime results.
 
 References: [Tauri builder API](https://docs.rs/tauri/2.12.5/tauri/webview/struct.WebviewWindowBuilder.html), [versioned Tauri runtime](https://github.com/tauri-apps/tauri/blob/tauri-v2.12.5/crates/tauri-runtime-wry/src/lib.rs), [upstream Wry Windows implementation](https://github.com/tauri-apps/wry/blob/dev/src/webview2/mod.rs). Upstream dev source is research evidence, not a lockfile of installed dependencies.
 
@@ -30,3 +30,9 @@ The local CSP applies to bundled launcher content and does not replace ChatGPT's
 ## Future architecture (not implemented)
 
 Milestone 02 can replace the launcher entry path with tray and shortcut triggers into the same session lifecycle. Selection capture and handoff must remain separate from untrusted website privileges. Later popup styling and installation work must not weaken the capability boundary.
+
+## Reproducible development
+
+Docker's digest-pinned Node 24 Debian image installs dependencies using npm ci. Compose runs as the unprivileged node user with dropped capabilities, no host mounts, no published ports and no browser data access. The build context allowlist excludes installers, secrets, native artifacts and Git data. The image runs TypeScript checks, JavaScript configuration tests and frontend builds; no Rust GUI or Windows behavior is validated by Linux containers. Native PowerShell verification retains responsibility for Rust MSVC compilation, Rust tests, formatting and Clippy. Cargo.lock pins the resolved native dependency graph.
+
+The Windows host needs MSVC, Windows SDK and WebView2. popup.rs additionally reads WebView2's native profile IsInPrivateModeEnabled flag through Tauri with_webview on the owning UI thread. Unavailable or false private-mode verification rejects the popup and requests its destruction. It reads no page content, cookies, credentials or tokens. This closes the older-runtime fallback gap identified in the resolved Wry 0.57.1 implementation. Profile directories remain retained until safe offline cleanup; no directory deletion was added to runtime paths.

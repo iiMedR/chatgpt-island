@@ -1,0 +1,16 @@
+**
+!package.json
+!package-lock.json
+!index.html
+!tsconfig.json
+!vite.config.ts
+!src/
+!src/**
+!tests/
+!tests/**
+!src-tauri/
+!src-tauri/tauri.conf.json
+!src-tauri/capabilities/
+!src-tauri/capabilities/**
+!scripts/
+!scripts/verify-docker.sh

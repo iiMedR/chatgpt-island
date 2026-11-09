@@ -8,3 +8,5 @@ src-tauri/gen/
 *.log
 .vscode/
 .DS_Store
+
+.setup/
