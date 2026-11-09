@@ -1,0 +1,120 @@
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header container">
+  <a class="brand" href="#top" aria-label="ChatGPT Island home">
+    <img src="/assets/island-mark.png" alt="" width="48" height="48" fetchpriority="high" />
+    <span>ChatGPT Island</span>
+  </a>
+  <nav aria-label="Main navigation">
+    <a class="how-link" href="#how-it-works">How it works</a>
+    <a class="nav-github" [href]="repository" target="_blank" rel="noopener noreferrer">GitHub</a>
+    <app-download-button class="nav-download" [compact]="true" />
+  </nav>
+</header>
+
+<main id="main">
+  <section class="hero container" id="top" aria-labelledby="hero-title">
+    <p class="eyebrow">Open source · Windows</p>
+    <img
+      class="hero-logo"
+      src="/assets/island-mark.png"
+      alt="ChatGPT Island palm-tree logo"
+      width="120"
+      height="120"
+    />
+    <h1 id="hero-title">Your text.<br />A shortcut.<br />A little island.</h1>
+    <p class="hero-description">
+      Bring selected text into a private ChatGPT window.<br class="desktop-break" />
+      Add your question. Send when you’re ready.
+    </p>
+    <div class="hero-actions">
+      <app-download-button />
+      <a class="github-link" [href]="repository" target="_blank" rel="noopener noreferrer"
+        >View on GitHub <app-icon name="external"
+      /></a>
+    </div>
+    <p class="system-requirements">
+      Windows 10/11 x64 · MIT licensed ·
+      <a [href]="checksumUrl" target="_blank" rel="noopener noreferrer">SHA-256 checksum</a>
+    </p>
+    <div class="keybinding hero-shortcut" aria-label="Keyboard shortcut: Alt plus Shift plus E">
+      <kbd>Alt</kbd><span aria-hidden="true">+</span><kbd>Shift</kbd
+      ><span aria-hidden="true">+</span><kbd>E</kbd>
+    </div>
+  </section>
+
+  <section class="product container" aria-label="How the floating window works">
+    <app-product-demo />
+  </section>
+
+  <section class="how-it-works container" id="how-it-works" aria-labelledby="how-title">
+    <h2 id="how-title">From selection to conversation.</h2>
+    <ol class="steps">
+      <li>
+        <span class="step-number" aria-hidden="true">01</span>
+        <h3>Select</h3>
+        <p>Highlight text in a supported app.</p>
+      </li>
+      <li>
+        <span class="step-number" aria-hidden="true">02</span>
+        <h3>Open</h3>
+        <p>Press Alt + Shift + E.</p>
+      </li>
+      <li>
+        <span class="step-number" aria-hidden="true">03</span>
+        <h3>Ask</h3>
+        <p>Add your question and send it yourself.</p>
+      </li>
+    </ol>
+    <p class="feature-line">Private sessions. Editable drafts. No API key.</p>
+  </section>
+</main>
+
+<footer class="site-footer container">
+  <div class="footer-main">
+    <a class="brand" href="#top"
+      ><img src="/assets/island-mark.png" alt="" width="48" height="48" loading="lazy" /><span
+        >ChatGPT Island</span
+      ></a
+    >
+    <nav aria-label="Footer navigation">
+      <a [href]="repository" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a [href]="repository + '/blob/master/CHANGELOG.md'" target="_blank" rel="noopener noreferrer"
+        >Changelog</a
+      >
+      <button type="button" class="text-button" (click)="openPrivacy()">Privacy</button>
+    </nav>
+  </div>
+  <p class="independent">Independent project. Not affiliated with OpenAI.</p>
+</footer>
+
+<dialog #privacy class="privacy-dialog" aria-labelledby="privacy-title">
+  <div class="dialog-heading">
+    <h2 id="privacy-title">Privacy, in plain language.</h2>
+    <button
+      class="close-dialog"
+      type="button"
+      aria-label="Close privacy information"
+      (click)="closePrivacy()"
+    >
+      <app-icon name="close" />
+    </button>
+  </div>
+  <p>
+    This landing page uses no analytics, tracking cookies, or third-party fonts. Download and checksum links go directly to GitHub, which receives those requests and serves the files.
+  </p>
+  <p>
+    The installed app captures text only when you invoke its shortcut. It prepares an editable draft
+    and never presses Send. The preview on this page is an illustration, not a live ChatGPT session.
+  </p>
+  <p>
+    Preparing a draft exposes your text to the real ChatGPT page and its scripts before submission.
+    Website processing and remote retention are outside the app’s control.
+  </p>
+  <p>
+    Private sessions use fresh browser profiles. Selected-text state is released when the popup
+    closes, but residual browser files may remain. Private mode does not promise complete erasure.
+  </p>
+  <a [href]="repository + '/blob/master/SECURITY.md'" target="_blank" rel="noopener noreferrer"
+    >Read the security and privacy notes <app-icon name="external"
+  /></a>
+</dialog>
