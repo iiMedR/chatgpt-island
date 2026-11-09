@@ -39,7 +39,7 @@
    - [x] Actual failed-handoff notice and native borderless/rounded rendering observed.
    - [ ] Manual guest response/follow-up, desktop contenteditable, Windows 10/mixed-DPI/multiple monitors/hot-plug and native move/resize acceptance remain unverified.
    - [x] No repeated compatibility sweep; respected user's reduced-testing request. Details in CHATGPT_HANDOFF.md.
-5. **Testing, Reliability & Windows Installer — NOT STARTED**
+5. **Testing, Reliability & Windows Installer — PARTIAL: release infrastructure**
 
 Detailed observations, interrupted tests and remaining verification are in MILESTONE02.md. Safe automatic profile deletion remains unimplemented. The primary isolation behavior uses fresh, verified-private WebViews; remote erasure is not claimed.
 
@@ -49,3 +49,5 @@ Final M3 verification: formatting applied and `cargo check --locked` passed afte
 Final M4 integration compiled successfully after serializing fallback notices with popup destruction. No repeated suite or compatibility sweep was performed. Full implementation/evidence/limits are in CHATGPT_HANDOFF.md. Milestone 05 remains unstarted.
 
 User-requested UX fix: removed automatic manual-handoff windows. Failed/uncertain preparation leaves only the ChatGPT popup; the optional notice is now available explicitly from Settings → Open manual handoff. Release rebuilt; no repeated test suites.
+
+Release infrastructure: MIT chosen by owner; final replacement logo converted; per-user Windows x64 NSIS and WebView2 bootstrapper configured; pinned tag-only build/draft-release workflow, stable assets/checksums, contribution/security/changelog/release/install documentation prepared. Docker and native verification passed (30 Rust, 4 JS, formatting, strict Clippy). No commits pushed, tags/releases created or binaries uploaded. Installation/upgrade/uninstall and hosted workflow acceptance remain unverified. See RELEASING.md and RELEASE_BUILD_REPORT.md for actual artifact results.

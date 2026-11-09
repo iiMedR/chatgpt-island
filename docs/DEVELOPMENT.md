@@ -139,3 +139,9 @@ If the composer is unavailable, inspect the real page visually: login/challenge/
 The trusted failed-handoff notice provides explicit user selection/copy rather than automatic clipboard writes. If a callback is uncertain, check the composer before pasting; automatic insertion is never retried. The notice and pending state are session-owned and must disappear with confirmed destruction. Cancel preserves the page. Slow loading beyond the 15-second readiness bound can deliberately fall back.
 
 For borderless geometry, `window_layout.rs` uses source HWND/cursor monitor working area and physical coordinates scaled from logical targets. Do not clamp negative coordinates to zero. Display bounds exclude taskbars. Initial hidden creation prevents a visible primary-monitor flash. Native movement/resizing/scaling events re-check visibility. Alt+F7/Alt+F8 invoke Windows system move/size while the popup is focused; arrow keys and Enter complete the operation. No site drag IPC or mouse overlay exists. DWM corners are best-effort on Windows 11; Windows 10 and mixed-DPI/hot-plug cases need separate environments, not claims inferred from unit tests.
+
+## Production packaging
+
+Use `npm run release:build` for the supported x64 NSIS route, rather than manually copying a developer build. It invokes version/resource checks, a release build, dependency notice generation, compiler path remapping, stable asset naming, checksums and package auditing. Missing supplemental licenses fail the build; keep their source/checksum records and LF byte stability intact. The app identifier is unchanged so existing settings paths remain compatible.
+
+See RELEASING.md for the tag-only draft workflow, manual-publication gates and website download contract. See INSTALLATION.md for end-user instructions and RELEASE_BUILD_REPORT.md for actual local output evidence. Existing milestone observations remain historical; a build is not a substitute for clean-machine installer acceptance.

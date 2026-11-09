@@ -111,3 +111,9 @@ Preparing website input exposes it to that site's JavaScript. No submitted-messa
 References: [Microsoft WebView2 security](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/security), [WebView2 script execution](https://learn.microsoft.com/en-us/microsoft-edge/hosting/webview2/gettingstarted), [native rounded corners](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/ui/apply-rounded-corners).
 
 Manual handoff notice behavior was subsequently changed at user request: preparation failure records Failed silently. Only the trusted Settings command can enqueue ShowHandoff for the active session. No automatic fallback window is created; its local capability and deliberate copy flow are retained for optional use.
+
+## Production distribution
+
+The release configuration now enables current-user NSIS packaging for Windows x64. `scripts/build-release.ps1` builds the pinned target with compiler path remapping, generates dependency notices, checks the resource/capability boundary, and creates stable installer/checksum/manifest assets. Project LICENSE and dependency notices are the only external app resources. The development launcher is dynamically imported only in Vite development mode and omitted from production assets. Remote permissions remain unchanged.
+
+`release.yml` separates a read-only Windows verification/build job from a write-capable Ubuntu draft-release job. Only stable version tag pushes trigger it. It does not publish on ordinary commits; draft publication is a separate maintainer action. The existing app identifier is retained. NSIS embeds the WebView2 bootstrapper and checks a minimum runtime; runtime installation still needs network access when absent/outdated. See RELEASING.md for version matching, signature state, download URLs and acceptance gates.

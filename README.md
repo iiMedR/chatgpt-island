@@ -1,12 +1,16 @@
 # ChatGPT Island
 
+<img src="assets/branding/logo.png" alt="ChatGPT Island logo" width="128">
+
+Independent open-source project. Not affiliated with, endorsed by, or sponsored by OpenAI. Licensed under [MIT](LICENSE).
+
 **Select text. Press a shortcut. Ask ChatGPT in a private floating window.**
 
 ChatGPT Island is a Windows tray utility that brings selected text from supported applications into an editable draft on the real ChatGPT website. Add your question and send it yourself.
 
 Built with **Tauri 2, Rust, Microsoft WebView2, and TypeScript**. No OpenAI API key, custom chat frontend, Node.js backend, or application account is required. ChatGPT guest availability still depends on the website and network.
 
-> **Project status:** The native application, text capture, and draft handoff are implemented. Selected workflows have been verified on the development machine; broader compatibility and reliability checks remain incomplete. Windows installer/distribution work has not started. See [verification and limitations](#verification-and-limitations).
+> **Project status:** The native application, text capture, and draft handoff are implemented. Selected workflows have been verified on the development machine; broader compatibility and reliability checks remain incomplete. Windows x64 NSIS packaging and tag-only draft-release infrastructure are now configured; installation/upgrade/uninstall and hosted release execution remain unverified. See [verification and limitations](#verification-and-limitations).
 
 ## Contents
 
@@ -23,7 +27,7 @@ Built with **Tauri 2, Rust, Microsoft WebView2, and TypeScript**. No OpenAI API 
 
 ## Using the app
 
-Run the built `.exe`. Normal startup creates a tray icon, with no launcher or empty window. Windows may place the icon under hidden tray icons. Run one instance at a time so the shortcut is available.
+Install using the Windows x64 NSIS setup executable from an owner-approved GitHub Release; see [installation and uninstalling](docs/INSTALLATION.md). No public release is claimed by this document. End users need WebView2 and internet access, but no development tools. Run the installed app from the Start menu. Normal startup creates a tray icon, with no launcher or empty window. Windows may place the icon under hidden tray icons. Run one instance at a time so the shortcut is available.
 
 1. Select text in a supported application, such as Notepad or Opera.
 2. Press **Alt + Shift + E**.
@@ -272,19 +276,23 @@ npm run tauri dev
 
 Keep the development terminal open. Startup is tray-only; use the shortcut or tray menu. Quit any other Island instance before launching another.
 
-### Build a standalone executable
+### Build a Windows installer
 
 ```powershell
-npm run tauri build -- --no-bundle
+npm run release:build
 ```
 
-Output:
+The build script targets Windows x64 explicitly, produces an NSIS per-user installer, generates dependency notices, verifies production configuration and writes a SHA-256 checksum/manifest:
 
 ```text
-src-tauri/target/release/chatgpt-island.exe
+artifacts/release/ChatGPT-Island-Windows-x64-Setup.exe
+artifacts/release/SHA256SUMS.txt
+artifacts/release/release-manifest.json
 ```
 
-Frontend assets are embedded in the application. Installer bundling is currently disabled; a standalone executable build is not an installer or a published GitHub Release.
+The original installer and executable are under `src-tauri/target/x86_64-pc-windows-msvc/release/`. Public distribution should use the installer, which includes license notices and WebView2 bootstrapper handling. The runtime download requires internet if WebView2 is missing/outdated. Outputs are currently unsigned and may trigger Windows warnings.
+
+The [release guide](docs/RELEASING.md) explains tag/version validation, least-privilege Actions jobs, manual draft publication, stable website download URLs and acceptance gates. Ordinary commits never trigger release publication. No updater or website is built.
 
 ### Verification commands
 
@@ -313,7 +321,7 @@ Recorded results describe specific versions, controls, and host conditions—not
 | Borderless popup and native rounded edges | Observed on the development host |
 | Native clipboard fallback, Word/PDF, mixed DPI, multiple monitors, hot unplug, keyboard move/resize | Remaining native coverage |
 | Physical tray Quit delivery and shortcut release | Outstanding verification item |
-| Windows installer and distribution work | Not started |
+| Windows installer and distribution work | NSIS/workflow infrastructure configured; clean-machine and hosted-release acceptance pending |
 
 Website layout changes, unavailable guest access, slow loading, protected controls, and inaccessible selections can prevent automatic preparation. Failures leave the browser usable; optional manual handoff is available from Settings without an automatic extra window. Escape currently takes precedence over website menus while the popup is focused.
 
@@ -328,3 +336,11 @@ Automated tests cover validation, state transitions, cancellation, origin checks
 - [Foundation feasibility](docs/FEASIBILITY.md) — guest conversation and private-session observations.
 - [Background and tray verification](docs/MILESTONE02.md) — lifecycle results and unresolved tray behavior.
 - [Requirements](docs/REQUIREMENTS.md) and [progress](docs/PROGRESS.md) — scope, milestone status, and remaining work.
+
+## Open source
+
+See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), [CHANGELOG.md](CHANGELOG.md), and the [MIT license](LICENSE). Third-party dependencies retain their own licenses; dependency notices are included in the installer. Please keep personal selections, credentials, profiles and signing material out of issues and pull requests.
+
+- [Installation](docs/INSTALLATION.md) — end-user runtime, tray, shortcuts, privacy and uninstall guidance.
+- [Releasing](docs/RELEASING.md) — production builds, website download contract and exact first-release steps.
+- [Local release build report](docs/RELEASE_BUILD_REPORT.md) — actual installer sizes, hashes, checks and remaining gates.
