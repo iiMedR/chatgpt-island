@@ -1,122 +1,35 @@
-use crate::session::{self, Session};
-use std::sync::Mutex;
+use crate::{
+    lifecycle::{Controller, Profile, Request},
+    session,
+};
 use tauri::{
     AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, webview::NewWindowResponse,
 };
-pub type Sessions = Mutex<Session>;
 
-fn authorize(window: &WebviewWindow) -> Result<(), String> {
-    if window.label() == "main" {
-        Ok(())
-    } else {
-        Err("Controls are restricted to the local launcher.".into())
-    }
-}
-
-#[tauri::command]
-pub async fn open_popup(app: AppHandle, window: WebviewWindow) -> Result<String, String> {
-    authorize(&window)?;
+pub fn create(app: &AppHandle, profile: &Profile) -> Result<(), String> {
     let url = session::CHATGPT_URL
         .parse()
         .map_err(|e| format!("Invalid website URL: {e}"))?;
-    let state = app.state::<Sessions>();
-    let root = app
-        .path()
-        .app_local_data_dir()
-        .map_err(|e| e.to_string())?
-        .join("private-sessions");
-    let (id, profile) = {
-        let mut s = state.lock().map_err(|_| "Session state unavailable.")?;
-        if s.active().is_some() {
-            return Err("A popup is already active or being destroyed.".into());
-        }
-        let (id, profile) = session::create_profile(&root)?;
-        s.begin(id.clone())?;
-        (id, profile)
-    };
-    let result = WebviewWindowBuilder::new(&app, &id, WebviewUrl::External(url))
-        .title("ChatGPT Island - private feasibility test")
+    let popup = WebviewWindowBuilder::new(app, &profile.id, WebviewUrl::External(url))
+        .title("ChatGPT Island")
         .inner_size(900.0, 650.0)
         .center()
         .resizable(true)
         .incognito(true)
-        .data_directory(profile)
+        .data_directory(profile.path.clone())
         .devtools(false)
         .on_navigation(session::allowed_navigation)
         .on_new_window(|_, _| NewWindowResponse::Deny)
         .on_download(|_, _| false)
-        .build();
-    match result {
-        Ok(popup) => {
-            if let Err(error) = verify_private_mode(&popup) {
-                // Keep the reservation until Destroyed. If destruction fails,
-                // mark ready so the launcher can retry destruction.
-                state
-                    .lock()
-                    .map_err(|_| "Session state unavailable.")?
-                    .opened(&id);
-                if let Err(destroy_error) = popup.destroy() {
-                    return Err(format!("{error}; destruction failed: {destroy_error}"));
-                }
-                return Err(error);
-            }
-            state
-                .lock()
-                .map_err(|_| "Session state unavailable.")?
-                .opened(&id);
-            Ok("Popup created; WebView2 reports private mode enabled. Verify loading and guest access manually.".into())
-        }
-        Err(error) => {
-            state
-                .lock()
-                .map_err(|_| "Session state unavailable.")?
-                .release(&id);
-            Err(format!(
-                "WebView creation failed. Check WebView2 Runtime and profile permissions: {error}"
-            ))
-        }
-    }
+        .build()
+        .map_err(|e| {
+            format!("WebView creation failed. Check WebView2 Runtime and profile permissions: {e}")
+        })?;
+    verify_private_mode(&popup)?;
+    install_escape(&popup, app.clone())?;
+    eprintln!("Private popup created; WebView2 private-mode flag verified.");
+    Ok(())
 }
-
-#[tauri::command]
-pub async fn close_popup(app: AppHandle, window: WebviewWindow) -> Result<String, String> {
-    authorize(&window)?;
-    let state = app.state::<Sessions>();
-    let id = state
-        .lock()
-        .map_err(|_| "Session state unavailable.")?
-        .request_close()?;
-    if let Some(popup) = app.get_webview_window(&id) {
-        if let Err(error) = popup.destroy() {
-            state
-                .lock()
-                .map_err(|_| "Session state unavailable.")?
-                .close_failed();
-            return Err(format!("Could not destroy popup: {error}"));
-        }
-        Ok("Destruction requested. Wait for idle status before reopening.".into())
-    } else {
-        state
-            .lock()
-            .map_err(|_| "Session state unavailable.")?
-            .release(&id);
-        Ok("Popup no longer exists; session reference released.".into())
-    }
-}
-
-#[tauri::command]
-pub fn popup_status(app: AppHandle, window: WebviewWindow) -> Result<String, String> {
-    authorize(&window)?;
-    let state = app.state::<Sessions>();
-    let s = state.lock().map_err(|_| "Session state unavailable.")?;
-    Ok(if s.active().is_some() {
-        "active / closing"
-    } else {
-        "idle"
-    }
-    .into())
-}
-
 // Inspect only the native profile's private-mode flag, never page data or cookies.
 #[cfg(windows)]
 fn verify_private_mode(popup: &WebviewWindow) -> Result<(), String> {
@@ -153,4 +66,56 @@ fn verify_private_mode(popup: &WebviewWindow) -> Result<(), String> {
 #[cfg(not(windows))]
 fn verify_private_mode(_popup: &WebviewWindow) -> Result<(), String> {
     Err("This feasibility prototype requires Windows WebView2.".into())
+}
+
+#[cfg(windows)]
+fn install_escape(popup: &WebviewWindow, app: AppHandle) -> Result<(), String> {
+    use webview2_com::{
+        AcceleratorKeyPressedEventHandler,
+        Microsoft::Web::WebView2::Win32::{
+            COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN, COREWEBVIEW2_PHYSICAL_KEY_STATUS,
+        },
+    };
+    let (sender, receiver) = std::sync::mpsc::channel();
+    popup
+        .with_webview(move |webview| {
+            let handler = AcceleratorKeyPressedEventHandler::create(Box::new(move |_, args| {
+                if let Some(args) = args {
+                    // SAFETY: WebView2 delivers these arguments on its controller thread.
+                    unsafe {
+                        let mut key = 0;
+                        let mut kind = Default::default();
+                        args.VirtualKey(&mut key)?;
+                        args.KeyEventKind(&mut kind)?;
+                        if key == 0x1b && kind == COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN {
+                            let mut status = COREWEBVIEW2_PHYSICAL_KEY_STATUS::default();
+                            args.PhysicalKeyStatus(&mut status)?;
+                            args.SetHandled(true)?;
+                            if !status.WasKeyDown.as_bool() {
+                                let _ = app.state::<Controller>().send(Request::Close);
+                            }
+                        }
+                    }
+                }
+                Ok(())
+            }));
+            let mut token = 0;
+            // SAFETY: controller is valid on this owning thread. WebView2 retains the
+            // COM handler until controller destruction; it captures no WebView handle.
+            let result = unsafe {
+                webview
+                    .controller()
+                    .add_AcceleratorKeyPressed(&handler, &mut token)
+            }
+            .map_err(|e| e.to_string());
+            let _ = sender.send(result);
+        })
+        .map_err(|e| e.to_string())?;
+    receiver
+        .recv_timeout(std::time::Duration::from_secs(10))
+        .map_err(|e| e.to_string())?
+}
+#[cfg(not(windows))]
+fn install_escape(_popup: &WebviewWindow, _app: AppHandle) -> Result<(), String> {
+    Err("Escape handling requires Windows WebView2.".into())
 }

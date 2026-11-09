@@ -1,69 +1,29 @@
 # ChatGPT Island
 
-Milestone 01 Windows-only Tauri 2 / Rust feasibility prototype. A minimal Vanilla TypeScript development launcher opens the actual ChatGPT website; there is no custom chat UI, API key, backend, OAuth, account integration, shortcut, tray, or selection capture.
+Windows Tauri 2 / Rust background utility using the actual ChatGPT website in a private WebView2 popup. No API key, custom chat interface, backend, OAuth or application account is required. Guest availability depends on ChatGPT and the current network/location.
 
-**Milestone 01: COMPLETE on the tested Windows host/network. Native guest question, response, follow-up and fresh-session reopening/restart passed. Profile directories remain retained; automatic deletion is not implemented. See docs/FEASIBILITY.md for evidence and untested reliability cases.**
+Milestone 01 guest feasibility is verified. Milestone 02 background/tray/shortcut implementation is in place; see [native verification results](docs/MILESTONE02.md) for passed and outstanding checks. Milestones 03–05 have not been implemented.
 
-## Prerequisites
+## Use
 
-Inspected on 2026-11-09: Windows build 26200.9711, Node 24.22.1, npm 11.19.1, WebView2 157.0.4341.42. The follow-up setup installed Rust 1.99.1 (stable MSVC), Visual Studio Build Tools 2022 17.14.44 and Windows SDK 10.0.26100.0. Docker Desktop was already installed and its Linux engine is now operational.
+Start with `npm run tauri dev` during development. Normal startup creates a tray icon and **no launcher or popup**.
 
-1. Download [Visual Studio Build Tools 2022](https://aka.ms/vs/17/release/vs_BuildTools.exe). In the installer select **Desktop development with C++**, MSVC x64/x86 build tools, and a Windows 10/11 SDK. Complete installation and restart your terminal.
-2. Download and run the Windows installer from [rustup](https://rustup.rs/). Choose stable and the `x86_64-pc-windows-msvc` host. Then run:
+- **Alt + Shift + E** opens a fresh private popup; pressing it again requests closure.
+- **Escape** requests closure only inside the focused popup. It is handled natively by WebView2, not by website scripts or a global Escape shortcut.
+- Tray **Open ChatGPT Island** opens or focuses the current popup. Repeated opens do not replace a conversation.
+- Tray **Settings** shows shortcut status and the close-warning preference. **Show close warning again** resets that preference.
+- Tray **Quit** requests application exit, confirming conversation loss when a popup is open and warnings are enabled.
+- A normal left-click on the tray icon opens/focuses the popup; right-click opens its menu. Windows may place the icon under hidden icons.
 
-   ```powershell
-   rustup default stable-msvc
-   rustup component add rustfmt clippy
-   rustc --version
-   cargo --version
-   rustup show
-   ```
-3. If missing, install the Evergreen WebView2 Runtime from [Microsoft](https://developer.microsoft.com/en-us/microsoft-edge/webview2/). It is already detected here.
-4. Use Node.js LTS and npm. See [official Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
+The trusted close dialog offers Cancel, Close conversation and Don't show this again. Cancel preserves the popup and never saves the checkbox. Confirm destroys the WebView. Selecting the checkbox and confirming persists the skip-warning preference. Without it, every close request shows the warning again. The native X button follows the same rules. Closing a popup leaves the tray app running.
 
-## Development
+Escape takes precedence over ChatGPT's own menus/dialogs while its WebView has focus. Cancel the local confirmation to keep the conversation. Escape elsewhere has no island effect. Forceful process termination, crashes and OS shutdown cannot be guaranteed to display confirmation.
 
-From this project directory:
+## Development requirements
 
-```powershell
-npm ci
-npm test
-npm run build
-npm run tauri info
-npm run tauri dev
-```
+Windows 10/11 x64, Node.js 24 LTS/npm, stable Rust MSVC, Microsoft C++ Build Tools, Windows SDK and WebView2 Evergreen Runtime. The verified environment has Rust/Cargo 1.99.1, Build Tools 2022 17.14.44, SDK 10.0.26100.0 and WebView2 157.0.4341.42. See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for exact official installation instructions.
 
-Use **Open private popup**, interact directly with ChatGPT, then use its native close button or **Destroy popup**. Wait for `idle` before opening a fresh popup. Closing the launcher exits the application. These are development controls; Escape and global shortcuts are future work.
-
-Rust verification, from `src-tauri`:
-
-```powershell
-cargo check
-cargo test
-cargo fmt --check
-cargo clippy -- -D warnings
-```
-
-`npm run build` builds only the launcher assets. It does not compile Rust. Installer bundling is disabled. Cargo.lock is committed. Rust Tauri is pinned to 2.12.5; Wry resolves to 0.57.1. Run scripts/verify.ps1 for the complete native check sequence.
-
-## Privacy and limitations
-
-Each opening requests incognito mode and a newly created UUID-named data directory under `%LOCALAPPDATA%\com.chatgptisland.dev\private-sessions`. Previous directories are never reused. The app additionally checks the actual WebView2 profile private-mode flag and rejects unverified sessions. The native UI tests observed fresh conversation state across reopening and application restart. Browser profiles can share state when using the same environment, so incognito alone is insufficient.
-
-The app destroys windows rather than hiding them. It never stores or logs conversation text. Profile directories may contain runtime metadata or other residual data; they are deliberately retained because window destruction does not prove browser-process exit. No automatic deletion is attempted. To remove them, exit the app and confirm no WebView2 processes associated with these directories remain, then delete only this application's private-sessions directory. Do not delete another browser's profiles. Closing does not erase ChatGPT server data or guarantee forensic erasure.
-
-Only HTTPS navigation to exactly chatgpt.com on port 443 is allowed. New windows and downloads are denied. Other-origin redirects, including login, are blocked; this may affect guest feasibility. Network subresources remain controlled by the website, not by this top-level navigation policy. No challenges or restrictions are bypassed.
-
-## Troubleshooting
-
-- `cargo metadata ... program not found`: install Rust and reopen the terminal.
-- Missing linker or SDK: repair Build Tools with the workload above.
-- WebView creation failure: check WebView2 installation, profile directory permissions, and terminal diagnostics.
-- Blank/offline/error page: inspect your network, destroy and reopen; popup creation is not a successful-load signal.
-- Login/challenge/region restriction: record the observation and stop; do not bypass it.
-- Already active/closing: wait for idle or close the existing popup. Destruction failure permits a retry.
-
-## Docker default workflow
+Docker is the default for supported frontend checks:
 
 ```powershell
 docker desktop start
@@ -71,6 +31,41 @@ docker compose build
 docker compose run --rm dev
 ```
 
-Docker installs locked JavaScript dependencies and runs TypeScript, static security tests and the frontend build. It runs as a non-root user with no host mounts or published ports. Windows remains required for native Rust builds and all WebView2 GUI testing. See [development guide](docs/DEVELOPMENT.md) for setup, individual commands and debugging.
+Native Windows checks and execution:
 
-See [feasibility procedure and results](docs/FEASIBILITY.md), [architecture](docs/ARCHITECTURE.md), [requirements](docs/REQUIREMENTS.md), and [progress](docs/PROGRESS.md).
+```powershell
+npm ci
+.\scripts\verify.ps1
+npm run tauri dev
+```
+
+Docker installs locked JavaScript dependencies, runs TypeScript/security tests and builds frontend assets. Windows is required for Rust, tray, global shortcut and WebView2 GUI verification. Cargo.lock and package-lock.json are committed. Installer generation remains disabled.
+
+The optional development launcher is available only in debug builds:
+
+```powershell
+npm run tauri dev -- -- --dev-launcher
+```
+
+Its close control requests confirmation, and its native X requests application Quit. It is not required during normal operation.
+
+## Privacy, security and cleanup
+
+Every opening uses incognito mode and a fresh UUID directory under `%LOCALAPPDATA%\com.chatgptisland.dev\private-sessions`. Native code verifies WebView2's actual private-mode flag. Closing destroys the window and invalidates its session reference. Previous directories are never reused.
+
+Profile directories remain retained because no general browser-process-exit cleanup protocol is implemented. They may contain runtime metadata or other residual files. Exit the app and verify all processes associated with its exact private-sessions paths have ended before any offline removal. Never remove active or unrelated browser profiles. Closing does not erase remote ChatGPT data or promise forensic local erasure.
+
+Only the boolean `skip_close_confirmation` is persisted in `%APPDATA%\com.chatgptisland.dev\settings.json`. Corrupt settings default to warnings enabled. No conversation text, selected text, cookies or tokens are stored in settings.
+
+Remote content has no Tauri capabilities. Only narrowly scoped local launcher, confirmation and settings windows can invoke their respective controls. There are no filesystem/shell/shortcut permissions for websites or frontend code. Popup navigation is restricted to exact HTTPS chatgpt.com on port 443; new windows and downloads are denied. No authentication or challenge bypass is provided.
+
+## Troubleshooting
+
+- Shortcut unavailable: use the tray menu; another application may own Alt + Shift + E. Quit the conflicting app and restart Island. Do not run duplicate Island instances unintentionally.
+- No launcher visible: normal behavior; use the tray icon or shortcut.
+- Blank/offline page or guest restriction: inspect your connection and the website. Record login/challenge requirements rather than bypassing them.
+- Popup creation failure: Settings displays safe diagnostics; check WebView2 and profile-directory permissions.
+- Missing Cargo/linker: follow the Windows setup guide and reopen the terminal.
+- A Chromium window-class shutdown diagnostic was observed in Milestone 01 despite successful process exit; see feasibility notes.
+
+See [architecture](docs/ARCHITECTURE.md), [requirements](docs/REQUIREMENTS.md), [progress](docs/PROGRESS.md), [Milestone 01 evidence](docs/FEASIBILITY.md), and [Milestone 02 verification](docs/MILESTONE02.md).

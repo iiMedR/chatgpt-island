@@ -85,3 +85,25 @@ Each popup uses incognito plus a unique application-owned profile directory. Saf
 - `cargo` not found: reopen the terminal or apply the process-local PATH refresh above.
 - Container shell reports `build\r`: ensure shell scripts use LF; `.gitattributes` enforces this for Git checkouts.
 - Guest login/challenge: record the restriction and stop; it is not evidence of an application compiler failure.
+
+## Milestone 02 debugging
+
+Normal `npm run tauri dev` launches the tray utility with no local window. Press Alt + Shift + E or use the tray menu. Right-click the icon (possibly in hidden icons) for Open, Settings and Quit. The optional debug launcher is:
+
+```powershell
+npm run tauri dev -- -- --dev-launcher
+```
+
+The launcher is not part of normal startup. Its native X requests Quit; Request close follows the same confirmation policy as the shortcut. Closing Settings leaves the background app alive.
+
+If the shortcut fails, Settings opens with the conflict diagnostic and the tray remains usable. Ensure only the intended Island instance is running, quit conflicting applications, and restart. Registration is performed in Rust; do not grant global-shortcut frontend permissions to debug delivery. Only the initial key press should toggle; release resets the pressed latch.
+
+Lifecycle transitions are covered by Rust tests. For native diagnosis, use the launcher's state display in debug mode. Expected states: Closed -> Opening -> Open -> AwaitingCloseConfirmation -> Closing -> Closed. Cancel returns to Open. Repeated close requests should show only one confirmation. Creation/destruction errors appear in Settings and the development terminal, without conversation content.
+
+Escape is handled by the popup controller's native AcceleratorKeyPressed callback, not global registration. Test once in the focused popup and once in another application. It intentionally takes precedence over the website's own Escape handling. Local confirmation Escape cancels. Never add privileged webpage IPC as a workaround.
+
+Settings are stored in the app configuration directory, normally `%APPDATA%\com.chatgptisland.dev\settings.json`. Only skip_close_confirmation is allowed. Use Settings -> Show close warning again to reset; do not modify cookies or other browser profiles. Cancel must not persist the checkbox. Confirm with the checkbox must survive app restart. Filesystem errors must preserve the live conversation.
+
+For shutdown testing, Tray Quit with a popup should confirm when warnings are enabled; Cancel must keep both app and conversation. Confirm must destroy the popup and exit. Verify no app-owned WebView2 processes remain, then verify a subsequent process can register the shortcut. Do not treat OS force termination as proof of orderly unregistration or tray Quit behavior.
+
+The automation tool in this session can target native application windows but does not expose the taskbar. Tests of physical tray menu interaction therefore require a user action if no targetable shell surface is available. Record those tests accurately instead of inferring success from TrayIconBuilder compilation.

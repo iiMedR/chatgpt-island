@@ -1,38 +1,76 @@
 # Architecture
 
-The local Vite/Vanilla TypeScript launcher invokes three Rust commands. Tauri uses its Wry runtime and Microsoft WebView2 on Windows. The remote popup is a separate WebviewWindow, not an iframe or custom AI interface.
+ChatGPT Island is a Windows-only Tauri 2 / Rust utility. Wry hosts Microsoft WebView2. The remote popup contains actual https://chatgpt.com; trusted Vanilla TypeScript is used only for confirmation, settings and an optional development launcher.
 
-- `main.rs`: executable entry point.
-- `lib.rs`: runtime initialization, managed state, command registration, shutdown and initialization diagnostics.
-- `popup.rs`: local-launcher authorization, async creation/destruction commands, status, navigation and download policy.
-- `session.rs`: active/closing state, atomic unique profile-directory creation, URL policy, unit tests.
-- `build.rs`: explicitly lists application commands so Tauri generates permission definitions.
-- `capabilities/default.json`: permits only these commands, only on the local main window; no remote origin grants.
+## Native modules
 
-## Session ownership
+| Module | Responsibility |
+|---|---|
+| main.rs / lib.rs | Runtime/plugin initialization, tray startup, native window events, background lifetime and authorized exit |
+| tray.rs | Official TrayIconBuilder, title/Open/Settings/Quit menu, left-click open/focus |
+| shortcuts.rs | Official global-shortcut plugin, Alt+Shift+E registration, press/release latch and registration cleanup state |
+| lifecycle.rs | Typed state model, one worker queue, popup/session ownership, decision validation, local commands and orderly Quit |
+| popup.rs | Existing incognito/unique-directory WebView construction, private-mode verification and native Escape handler |
+| session.rs | Atomic unique profile creation and restricted URL policy |
+| confirmation.rs | Creation/focus of trusted local windows and local-origin navigation restrictions |
+| settings.rs | Default/corruption handling and reliable single-boolean preference persistence |
 
-A mutex protects one session reservation. Open checks idle, atomically creates a UUID directory, reserves the identifier, releases the lock, then builds the WebView. No mutex is held across native creation or destruction. Creation failure releases the reservation. Duplicate requests fail. Close requests during creation fail without releasing the reservation. After creation, close marks closing and calls destroy; only the Destroyed event releases the active reference. A failed destroy resets closing for retry. Native window closure also releases state. Commands are async where WebView2 creation could otherwise deadlock the UI thread. Closing the launcher exits Tauri and its windows. Abnormal termination relies on OS teardown; leftover directories are not reused.
+## Background lifetime
 
-The app stores only a session label, not a long-lived WebView handle. Browser resources remain owned by the Tauri runtime. The profile root is app-local data, with one disposable-use directory per opening. Retention on disk is explicitly disclosed: no process-lifetime-aware directory deletion is implemented. Destruction and local deletion are distinct from remote service retention.
+Normal configuration has no startup windows. Setup installs the lifecycle controller, creates the tray and registers the shortcut once. The optional --dev-launcher flag is accepted only by debug builds. Tray initialization failure aborts startup instead of leaving an inaccessible invisible process. Shortcut failure keeps the tray usable and opens Settings with conflict diagnostics.
 
-## Private WebView configuration
+The runtime prevents automatic exit when the last popup/local window closes. Only the lifecycle's authorized Quit sets the exit gate. Quit unregisters the shortcut, exits the runtime and ends the worker. There is no autostart, global text capture, clipboard handling or continuous application scanning. Normal idle execution blocks on the worker queue; only the explicitly enabled development launcher polls status.
 
-WebviewWindowBuilder uses External(https://chatgpt.com/), 900 x 650 logical pixels, centered, resizable, decorated, incognito(true), data_directory(unique_path), and disabled developer tools. Tauri 2.12.5 runtime source keys WebContext entries by data directory and forwards incognito to Wry. Wry upstream Windows source uses WebView2 controller options SetIsInPrivateModeEnabled and the data directory for environment creation. The inspected upstream Wry source also contains an older-environment fallback without that option. The follow-up Cargo.lock resolves Wry 0.57.1. Its installed source contains the same controller-option call and fallback. Native code now checks the actual profile private-mode flag; see the feasibility report for observed runtime results.
+## Lifecycle
 
-References: [Tauri builder API](https://docs.rs/tauri/2.12.5/tauri/webview/struct.WebviewWindowBuilder.html), [versioned Tauri runtime](https://github.com/tauri-apps/tauri/blob/tauri-v2.12.5/crates/tauri-runtime-wry/src/lib.rs), [upstream Wry Windows implementation](https://github.com/tauri-apps/wry/blob/dev/src/webview2/mod.rs). Upstream dev source is research evidence, not a lockfile of installed dependencies.
+The typed states are Closed, Opening, Open, AwaitingCloseConfirmation and Closing.
+
+```text
+Closed -> Opening -> Open -> AwaitingCloseConfirmation
+                       ^          | Cancel
+                       +----------+
+                                  | Confirm
+                                  v
+                               Closing -> Destroyed -> Closed
+Open -- warning disabled ------> Closing
+```
+
+A successful open reserves a UUID session/profile and moves to Opening before calling native creation. Success verifies private mode and installs native input handling before moving to Open. Failure releases ownership if no window exists; a live failed window remains reserved until actual destruction. No second popup can be opened during Opening or Closing.
+
+Tray Open focuses an existing popup. Shortcut toggles request closure. Native X and Escape request closure through the same controller. AwaitingCloseConfirmation prevents duplicate dialogs; repeated requests focus the one existing confirmation. Cancel restores Open without changing the session. Confirm transitions to Closing, calls destroy rather than hide, and waits for Destroyed before clearing the profile reference. Stale session events and confirmation decisions are rejected/ignored by identifier checks.
+
+Quit records pending exit. If confirmation is required, Cancel also cancels Quit. Confirm destroys the popup; actual destruction then completes exit. Quit without a popup exits directly. Force termination, crashes and OS shutdown may bypass the warning.
+
+## Threading and input
+
+Native callbacks only enqueue requests. A single named worker serializes effects. It holds no lifecycle mutex during WebView creation, UI dispatch, settings I/O or native destruction. Tauri dispatches WebView operations to the owning event loop. Private-mode and Escape-handler attachment use bounded worker-side waits; the UI thread never waits on this queue.
+
+The shortcut plugin handles only Alt+Shift+E. A pressed-state latch accepts the initial Pressed event, ignores key repeat, and resets on Released. No arbitrary debounce timer or low-level global keyboard hook is used. Unregistration is idempotent and also attempted on runtime exit.
+
+Escape uses the popup's WebView2 controller AcceleratorKeyPressed event. Only Escape keydown is handled; WasKeyDown suppresses repeat. The callback enqueues a close request and captures no WebView reference. Controller destruction releases the COM event handler. Escape is not globally registered and no website JavaScript is injected. It takes precedence over website menu/dialog Escape interactions; this compatibility tradeoff is documented.
+
+## Trusted UI and settings
+
+The confirmation window has a dedicated local capability permitting only resolve_confirmation. Its URL carries the session identifier; Rust rejects a decision for any other/non-pending session. Native X or local Escape cancels the dialog. Cancel is the initial keyboard focus. The optional checkbox is committed only after an affirmative Close conversation decision.
+
+The settings window can read the safe snapshot and reset the warning. Each role is separated from the development launcher capability. Local windows restrict navigation to packaged app origins (and the exact loopback Vite origin in debug). New windows are denied.
+
+Only skip_close_confirmation is serialized. Unknown/corrupt data defaults to warnings enabled. Writes use a unique temporary file in the app configuration directory, flush it, then replace settings.json with Windows MoveFileExW replace-existing/write-through flags. Persistence failure leaves the conversation alive and reports the error. There is no database, message history, cookie capture or token access. Separately launched processes load preferences independently; live cross-process preference synchronization is not implemented.
+
+## WebView2 privacy and cleanup
+
+The existing Tauri builder uses External(ChatGPT URL), incognito(true), a fresh application-owned data directory, 900 x 650 centered/resizable decorated windows, and disabled developer tools. Native ICoreWebView2Profile::IsInPrivateModeEnabled must return true; older-runtime fallback without private mode is rejected.
+
+Profile identifiers and paths are owned by the active lifecycle record and invalidated on Destroyed. Every new opening atomically creates another directory; prior and crash-leftover profiles are never reused. No automatic deletion is performed because window/controller destruction alone does not establish browser-process exit on every host. Retention is preferred over deleting locked or ambiguously owned paths. This neither promises complete local erasure nor remote ChatGPT deletion.
 
 ## Security boundary
 
-No opener, shell, filesystem, HTTP, or other plugins are registered. Application-command permissions are generated by AppManifest and granted exclusively to local main. Remote pages have no capabilities. Commands additionally check the invoking window label. The launcher cannot navigate to remote sites via its own UI. The remote popup cannot navigate to local app URLs or other origins, create additional windows, or download files. Normal website HTTPS subresources are not filtered by the navigation callback. No credential scripts, token hooks, browser-profile imports, keys, or content logging are used. Standard Tauri IPC origin checks and CSP remain enabled. Vite binds only to loopback during development; production uses bundled assets.
+The remote popup has no capability, even though the Rust-side application uses tray and shortcut APIs. No global-shortcut JavaScript permissions are granted. Local roles have exact labels, no wildcard windows, no remote origins, and only the commands each role needs. Every command additionally validates its invoking window label. The settings and confirmation pages never render diagnostics as HTML.
 
-The local CSP applies to bundled launcher content and does not replace ChatGPT's own headers. Top-level origin restrictions can prevent login or verification flows; record limitations rather than broadening access to bypass restrictions. See [Tauri capabilities](https://v2.tauri.app/reference/acl/capability/).
+Top-level popup navigation permits only exact HTTPS chatgpt.com on port 443 with no embedded credentials. New windows and downloads are denied. Website HTTPS subresources are not filtered by this top-level policy. No broad native, filesystem, shell or settings privileges reach ChatGPT. Standard Tauri origin checks and launcher CSP remain enabled. Authentication, CAPTCHA and rate-limit bypasses are not implemented.
 
-## Future architecture (not implemented)
+## Development split
 
-Milestone 02 can replace the launcher entry path with tray and shortcut triggers into the same session lifecycle. Selection capture and handoff must remain separate from untrusted website privileges. Later popup styling and installation work must not weaken the capability boundary.
+Docker uses the existing digest-pinned Node 24 image, npm ci and non-root containers for TypeScript, static security/configuration tests and frontend builds. No mounts, browser profiles, Docker socket or published ports are required. Native Windows verification covers Rust MSVC compilation/tests/Clippy plus actual tray, shortcut and WebView2 behavior. Cargo.lock pins native dependencies. Docker cannot validate Windows keyboard delivery or GUI integration.
 
-## Reproducible development
-
-Docker's digest-pinned Node 24 Debian image installs dependencies using npm ci. Compose runs as the unprivileged node user with dropped capabilities, no host mounts, no published ports and no browser data access. The build context allowlist excludes installers, secrets, native artifacts and Git data. The image runs TypeScript checks, JavaScript configuration tests and frontend builds; no Rust GUI or Windows behavior is validated by Linux containers. Native PowerShell verification retains responsibility for Rust MSVC compilation, Rust tests, formatting and Clippy. Cargo.lock pins the resolved native dependency graph.
-
-The Windows host needs MSVC, Windows SDK and WebView2. popup.rs additionally reads WebView2's native profile IsInPrivateModeEnabled flag through Tauri with_webview on the owning UI thread. Unavailable or false private-mode verification rejects the popup and requests its destruction. It reads no page content, cookies, credentials or tokens. This closes the older-runtime fallback gap identified in the resolved Wry 0.57.1 implementation. Profile directories remain retained until safe offline cleanup; no directory deletion was added to runtime paths.
+References: [Tauri tray API](https://docs.rs/tauri/2.12.5/tauri/tray/struct.TrayIconBuilder.html), [official shortcut plugin](https://v2.tauri.app/plugin/global-shortcut/), [Tauri capabilities](https://v2.tauri.app/reference/acl/capability/).

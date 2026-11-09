@@ -1,35 +1,89 @@
+mod confirmation;
+mod lifecycle;
 mod popup;
 mod session;
-
-use std::sync::Mutex;
+mod settings;
+mod shortcuts;
+mod tray;
+use lifecycle::{Controller, Request};
+use std::sync::atomic::Ordering;
 use tauri::Manager;
+use tauri_plugin_global_shortcut::GlobalShortcutExt;
 
 pub fn run() {
-    let result = tauri::Builder::default()
-        .manage(Mutex::new(session::Session::default()))
+    let app = tauri::Builder::default()
+        .plugin(shortcuts::plugin())
         .invoke_handler(tauri::generate_handler![
-            popup::open_popup,
-            popup::close_popup,
-            popup::popup_status
+            lifecycle::open_popup,
+            lifecycle::close_popup,
+            lifecycle::popup_status,
+            lifecycle::ui_snapshot,
+            lifecycle::resolve_confirmation,
+            lifecycle::reset_warning
         ])
+        .setup(|app| {
+            Controller::install(app.handle())?;
+            // A tray failure is fatal: never leave an inaccessible invisible app.
+            tray::initialize(app.handle())?;
+            shortcuts::register(app.handle());
+            if cfg!(debug_assertions) && std::env::args().any(|a| a == "--dev-launcher") {
+                confirmation::show_launcher(app.handle())?;
+            }
+            Ok(())
+        })
         .on_window_event(|window, event| {
-            if matches!(event, tauri::WindowEvent::Destroyed) {
-                if window.label() == "main" {
-                    window.app_handle().exit(0);
-                } else {
-                    let state = window.state::<popup::Sessions>();
-                    if let Ok(mut session) = state.lock() {
-                        session.release(window.label());
+            let app = window.app_handle();
+            let controller = app.state::<Controller>();
+            match event {
+                tauri::WindowEvent::CloseRequested { api, .. }
+                    if !controller.exiting.load(Ordering::SeqCst) =>
+                {
+                    match window.label() {
+                        "settings" => {}
+                        "main" => {
+                            api.prevent_close();
+                            let _ = controller.send(Request::Quit);
+                        }
+                        "confirmation" => {
+                            api.prevent_close();
+                            if let Some(session_id) = controller.session_id() {
+                                let _ = controller.send(Request::Decision {
+                                    session_id,
+                                    confirm: false,
+                                    skip: false,
+                                    reply: None,
+                                });
+                            }
+                        }
+                        id if id.starts_with("island-") => {
+                            api.prevent_close();
+                            let _ = controller.send(Request::Close);
+                        }
+                        _ => {}
                     }
-                    eprintln!(
-                        "Private popup destroyed; profile retained pending safe offline cleanup."
-                    );
                 }
+                tauri::WindowEvent::Destroyed if window.label().starts_with("island-") => {
+                    let _ = controller.send(Request::Destroyed(window.label().to_string()));
+                }
+                _ => {}
             }
         })
-        .run(tauri::generate_context!());
-    if let Err(error) = result {
-        eprintln!("ChatGPT Island initialization/runtime failure. Check WebView2 Runtime: {error}");
-        std::process::exit(1);
+        .build(tauri::generate_context!());
+    match app {
+        Ok(app) => app.run(|app, event| match event {
+            tauri::RunEvent::ExitRequested { api, .. } => {
+                if !app.state::<Controller>().exiting.load(Ordering::SeqCst) {
+                    api.prevent_exit();
+                }
+            }
+            tauri::RunEvent::Exit => {
+                let _ = app.global_shortcut().unregister_all();
+            }
+            _ => {}
+        }),
+        Err(error) => {
+            eprintln!("ChatGPT Island startup failed: {error}");
+            std::process::exit(1);
+        }
     }
 }

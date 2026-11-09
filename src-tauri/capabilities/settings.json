@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "settings",
+  "description": "Only the trusted local settings window can reset the close warning.",
+  "local": true,
+  "windows": ["settings"],
+  "permissions": ["allow-ui-snapshot", "allow-reset-warning"]
+}

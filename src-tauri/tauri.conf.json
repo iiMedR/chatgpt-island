@@ -11,14 +11,7 @@
   },
   "app": {
     "withGlobalTauri": false,
-    "windows": [
-      {
-        "title": "ChatGPT Island - Development",
-        "label": "main",
-        "width": 720,
-        "height": 600
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src ipc: http://ipc.localhost; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-src 'none'"
     }

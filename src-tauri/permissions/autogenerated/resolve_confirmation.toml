@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-resolve-confirmation"
+description = "Enables the resolve_confirmation command without any pre-configured scope."
+commands.allow = ["resolve_confirmation"]
+
+[[permission]]
+identifier = "deny-resolve-confirmation"
+description = "Denies the resolve_confirmation command without any pre-configured scope."
+commands.deny = ["resolve_confirmation"]

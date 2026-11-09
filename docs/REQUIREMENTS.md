@@ -1,17 +1,24 @@
-# Approved final-product requirements
+# Approved requirements and milestone status
 
-These describe the intended product, not completed Milestone 01 features.
+## Intended final product
 
 - Windows-only desktop application using Tauri 2 and Rust.
-- Background operation, system tray, and global Alt + Shift + E shortcut.
+- Background operation, system tray and global Alt + Shift + E shortcut.
 - Selected-text capture from supported Windows applications.
 - Private popup containing the actual ChatGPT website.
-- No custom AI interface, OpenAI API, OAuth, or required application signup.
-- No native close/minimize/maximize buttons in the final popup.
-- Approximately 10px rounded corners.
-- Escape or global shortcut closes the popup.
-- First-close confirmation and don't-show-again preference.
-- Fresh private conversation on every opening; no persistent island conversation storage.
-- Respect website authentication, guest availability, rate limits, verification, and service restrictions.
+- No custom AI interface, OpenAI API, OAuth or required application signup.
+- Final popup without native close/minimize/maximize buttons; approximately 10px rounded corners.
+- Escape or global shortcut requests closure.
+- First-close confirmation, Don't show this again and warning reset preference.
+- Fresh private conversation on every opening; no application conversation-history storage.
+- Respect authentication, guest availability, rate limits, verification and service restrictions.
 
-Milestone 01 uses native window decorations and a development launcher. It does not implement the tray, shortcuts, selection capture, composer insertion, preferences, final styling, autostart, installer, or distribution. Local profile residue and empirical privacy verification remain open concerns.
+## Five approved milestones
+
+1. **Foundation & Guest ChatGPT Feasibility:** verified on the tested host/network. See FEASIBILITY.md. Safe profile-retention limits remain documented.
+2. **Background App, System Tray & Shortcuts:** implemented; verification is recorded in MILESTONE02.md. Includes typed lifecycle, native Escape, trusted close warning, persistent boolean preference and Settings reset. Full completion depends on verified tray Quit and shortcut release.
+3. **System-Wide Text Selection:** not started. No selected-text capture or clipboard interception exists.
+4. **ChatGPT Handoff & Popup Polish:** not started. No automatic composer insertion, final borderless window or final corner treatment exists.
+5. **Testing, Reliability & Windows Installer:** not started. No installer generation or public distribution is enabled.
+
+Milestone 02 retains decorated popup windows for native X testing. Normal startup has no launcher; an optional debug-only launcher remains available. Autostart is not implemented. No application setting stores conversation text, selected text, cookies or authentication data. Profile directories remain application-owned and unique, but automatic deletion is not implemented.

@@ -100,3 +100,7 @@ Retained directories may contain runtime metadata or other residual files. No ap
 - Fault injection for offline networking, missing runtime, locked profile files, crash recovery and adversarial IPC remains NOT TESTED. These reliability extensions do not replace the passed core guest-feasibility observations.
 
 For reproduction, follow docs/DEVELOPMENT.md and the documented non-sensitive question/follow-up sequence above. Milestone 02 was not started.
+
+## Subsequent milestone
+
+This document preserves Milestone 01 observations. Milestone 02 implementation and its current native verification status are recorded in MILESTONE02.md and PROGRESS.md.

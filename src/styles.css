@@ -1,8 +1,15 @@
 :root { font-family: system-ui, sans-serif; color: #202020; background: #f7f7f7; }
-body { margin: 28px; }
+body { margin: 24px; }
 main { max-width: 650px; }
-h1 { font-size: 24px; }
+h1 { font-size: 22px; margin: 0 0 16px; }
 p { line-height: 1.5; }
-button { padding: 10px 14px; margin: 0 8px 8px 0; cursor: pointer; }
-button:disabled { cursor: wait; }
+button { border: 1px solid #aaa; border-radius: 7px; background: white; color: #202020; padding: 10px 14px; margin: 0 8px 8px 0; cursor: pointer; }
+button:focus-visible { outline: 2px solid #444; outline-offset: 2px; }
+button:disabled { cursor: wait; opacity: .6; }
+.primary { background: #242424; color: white; border-color: #242424; }
+.actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+.check { display: flex; gap: 8px; align-items: center; }
+#error { color: #9b2424; font-size: 13px; margin: 8px 0; }
 #message { white-space: pre-wrap; }
+dt { font-weight: 600; margin-top: 12px; }
+dd { margin: 5px 0 16px; }
